@@ -1,0 +1,75 @@
+<!doctype html>
+        document.getElementById("edit-cancel").addEventListener("click", () => {
+          state.editingIndex = null;
+          state.editState = null;
+          renderEditForm();
+        });
+
+        document.getElementById("edit-back-session").addEventListener("click", () => {
+          showScreen("session");
+        });
+
+        document.getElementById("result-copy").addEventListener("click", () => {
+          if (!state.sessionType) return;
+          copyText(formatResultText(state.sessionType, state.problems), "result-copy-message");
+        });
+
+        document.getElementById("result-home").addEventListener("click", () => {
+          showScreen("home");
+        });
+
+        document.getElementById("previous-result-copy").addEventListener("click", () => {
+          if (!state.lastSessionResults) return;
+          copyText(
+            formatResultText(state.lastSessionResults.sessionType, state.lastSessionResults.problems),
+            "previous-result-copy-message"
+          );
+        });
+
+        document.getElementById("previous-result-home").addEventListener("click", () => {
+          showScreen("home");
+        });
+
+        document.getElementById("end-dialog").addEventListener("click", (e) => {
+          if (e.target.id === "end-dialog") {
+            document.getElementById("end-dialog").classList.remove("open");
+          }
+        });
+      }
+
+      function recordProblem(status) {
+        const error = validateProblem({
+          grade: state.editor.grade,
+          problemType: state.editor.problemType,
+          memo: state.editor.memo,
+        });
+        if (error) {
+          window.alert(error);
+          return;
+        }
+
+        state.problems.push({
+          grade: state.editor.grade,
+          tryCount: state.editor.tryCount,
+          problemType: state.editor.problemType,
+          memo: state.editor.memo,
+          status,
+        });
+
+        state.editor = createInitialEditorState(state.editor.grade);
+        render();
+      }
+
+      bindEvents();
+      render();
+
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./service-worker.js").catch(() => {
+            // no-op
+          });
+        });
+      }
+    </script>
+  </body>
+</html>
