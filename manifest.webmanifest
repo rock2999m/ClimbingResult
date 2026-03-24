@@ -1,0 +1,21 @@
+{
+  "name": "Climbing Session Recorder",
+  "short_name": "ClimbRec",
+  "description": "クライミングのセッション記録用アプリ",
+  "start_url": "/<REPO_NAME>/",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/<REPO_NAME>/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/<REPO_NAME>/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
