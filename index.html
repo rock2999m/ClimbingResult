@@ -513,8 +513,7 @@
           var memoText = problem.memo && problem.memo.trim() ? problem.memo.trim() : "メモなし";
           lines.push((i + 1) + ". " + problem.grade + " / " + problem.problemType + " / " + problem.tryCount + "トライ / " + getStatusLabel(problem.status) + " / " + memoText);
         }
-        return lines.join("
-");
+        return lines.join("\n");
       }
 
       function validateProblem(params) {
