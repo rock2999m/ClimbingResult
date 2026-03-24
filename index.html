@@ -1,4 +1,902 @@
 <!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icons/icon-192.png" />
+    <title>Climbing Session Recorder</title>
+    <style>
+      :root {
+        --bg: #f1f5f9;
+        --card: #ffffff;
+        --text: #0f172a;
+        --muted: #64748b;
+        --line: #cbd5e1;
+        --line-soft: #e2e8f0;
+        --accent: #0f172a;
+        --accent-text: #ffffff;
+        --sub: #e2e8f0;
+        --danger-bg: #fee2e2;
+        --danger-text: #991b1b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
+      }
+
+      body {
+        min-width: 320px;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      .app {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+
+      .screen {
+        display: none;
+      }
+
+      .screen.active {
+        display: block;
+      }
+
+      .card {
+        background: var(--card);
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+      }
+
+      .card-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .card-title {
+        margin: 0;
+        font-size: 22px;
+      }
+
+      .stack {
+        display: grid;
+        gap: 16px;
+      }
+
+      .stack-sm {
+        display: grid;
+        gap: 8px;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .grid-edit {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 16px;
+      }
+
+      .label {
+        font-weight: 600;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .small {
+        font-size: 12px;
+      }
+
+      .button {
+        min-height: 48px;
+        padding: 12px 16px;
+        border-radius: 16px;
+        border: none;
+        background: var(--accent);
+        color: var(--accent-text);
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .button.secondary {
+        background: var(--sub);
+        color: var(--text);
+      }
+
+      .button.ghost {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--line);
+      }
+
+      .button.danger {
+        background: var(--danger-bg);
+        color: var(--danger-text);
+        border: 1px solid var(--line);
+      }
+
+      .field {
+        display: grid;
+        gap: 8px;
+      }
+
+      .input,
+      .select {
+        min-height: 48px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: #ffffff;
+        padding: 0 12px;
+        width: 100%;
+      }
+
+      .count-box {
+        min-height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: #ffffff;
+        font-size: 28px;
+        font-weight: 700;
+      }
+
+      .try-button {
+        width: 100%;
+        min-height: 80px;
+        font-size: 24px;
+      }
+
+      .result-list {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: #ffffff;
+        padding: 12px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .result-item {
+        border: 1px solid var(--line-soft);
+        border-radius: 14px;
+        background: #f8fafc;
+        padding: 12px;
+      }
+
+      .result-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        font-size: 14px;
+      }
+
+      .result-no {
+        font-size: 18px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .result-main {
+        font-weight: 700;
+      }
+
+      .edit-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .edit-item {
+        border: 1px solid var(--line-soft);
+        border-radius: 16px;
+        background: #ffffff;
+        padding: 12px;
+      }
+
+      .edit-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .icon-buttons {
+        display: flex;
+        gap: 8px;
+      }
+
+      .icon-button {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0;
+      }
+
+      .text-block {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: #ffffff;
+        padding: 12px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 14px;
+      }
+
+      .dialog-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+
+      .dialog-backdrop.open {
+        display: flex;
+      }
+
+      .dialog {
+        width: 100%;
+        max-width: 420px;
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 20px;
+      }
+
+      .dialog-title {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 16px;
+      }
+
+      @media (max-width: 760px) {
+        .grid-2,
+        .grid-edit {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <section id="screen-home" class="screen active">
+        <div class="card">
+          <div class="card-header">
+            <h1 class="card-title">クライミング Session Recorder</h1>
+          </div>
+          <div class="stack">
+            <div class="stack-sm">
+              <div class="label">Sessionタイプ</div>
+              <div class="grid-2">
+                <button id="home-type-volume" class="button secondary" type="button">容量</button>
+                <button id="home-type-max" class="button secondary" type="button">最大</button>
+              </div>
+            </div>
+            <div class="grid-2">
+              <button id="home-start" class="button" type="button" disabled>Session開始</button>
+              <button id="home-previous" class="button secondary" type="button">前回のResultを表示</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-session" class="screen">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Session記録</h2>
+              <div id="session-count" class="muted" style="font-size: 14px; margin-top: 4px;">記録済み 0件</div>
+            </div>
+            <button id="session-edit-open" class="button ghost" type="button">編集</button>
+          </div>
+          <div class="stack" style="gap: 20px;">
+            <div class="grid-2">
+              <label class="field">
+                <span class="label">グレード</span>
+                <select id="session-grade" class="select"></select>
+              </label>
+              <label class="field">
+                <span class="label">課題タイプ</span>
+                <select id="session-problem-type" class="select"></select>
+              </label>
+            </div>
+
+            <div class="field">
+              <div class="label">トライ回数</div>
+              <div id="session-try-count" class="count-box">1</div>
+              <button id="session-try-plus" class="button try-button" type="button">トライ +1</button>
+            </div>
+
+            <label class="field">
+              <span class="label">メモ（20文字以内）</span>
+              <input id="session-memo" class="input" type="text" maxlength="20" placeholder="任意入力" />
+              <div id="session-memo-count" class="small muted" style="text-align: right;">0/20</div>
+            </label>
+
+            <div class="grid-2">
+              <button id="session-record-sent" class="button" type="button">完登</button>
+              <button id="session-record-unsent" class="button secondary" type="button">Next</button>
+            </div>
+
+            <div class="stack-sm">
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                <div class="label">現在のResult</div>
+                <div class="small muted">直近の記録を表示</div>
+              </div>
+              <div id="session-result-list" class="result-list"></div>
+              <button id="session-end" class="button danger" type="button">Session終了</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-edit" class="screen">
+        <div class="grid-edit">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">記録済み課題一覧</h2>
+            </div>
+            <div id="edit-list" class="edit-list"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">課題編集</h2>
+            </div>
+            <div class="stack">
+              <div id="edit-form" class="stack" style="display: none;">
+                <label class="field">
+                  <span class="label">グレード</span>
+                  <select id="edit-grade" class="select"></select>
+                </label>
+
+                <label class="field">
+                  <span class="label">課題タイプ</span>
+                  <select id="edit-problem-type" class="select"></select>
+                </label>
+
+                <div class="field">
+                  <div class="label">トライ回数</div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <button id="edit-try-minus" class="button ghost icon-button" type="button">−</button>
+                    <div id="edit-try-count" class="count-box" style="min-width: 80px; min-height: 48px; font-size: 20px;">1</div>
+                    <button id="edit-try-plus" class="button ghost icon-button" type="button">＋</button>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <div class="label">完登 / 未登</div>
+                  <div class="grid-2">
+                    <button id="edit-status-sent" class="button secondary" type="button">完登</button>
+                    <button id="edit-status-unsent" class="button secondary" type="button">未登</button>
+                  </div>
+                </div>
+
+                <label class="field">
+                  <span class="label">メモ（20文字以内）</span>
+                  <input id="edit-memo" class="input" type="text" maxlength="20" placeholder="任意入力" />
+                  <div id="edit-memo-count" class="small muted" style="text-align: right;">0/20</div>
+                </label>
+
+                <div class="grid-2">
+                  <button id="edit-save" class="button" type="button">保存</button>
+                  <button id="edit-cancel" class="button secondary" type="button">キャンセル</button>
+                </div>
+              </div>
+
+              <button id="edit-back-session" class="button secondary" type="button">Session画面へ戻る</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-result" class="screen">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Result</h2>
+          </div>
+          <div class="stack">
+            <div id="result-list" class="edit-list"></div>
+            <div id="result-text" class="text-block"></div>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+              <button id="result-copy" class="button" type="button">コピー</button>
+              <button id="result-home" class="button secondary" type="button">ホームへ戻る</button>
+            </div>
+            <div id="result-copy-message" class="muted" style="font-size: 14px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-previous-result" class="screen">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">前回Result</h2>
+          </div>
+          <div class="stack">
+            <div id="previous-result-text" class="text-block"></div>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+              <button id="previous-result-copy" class="button" type="button">コピー</button>
+              <button id="previous-result-home" class="button secondary" type="button">ホームへ戻る</button>
+            </div>
+            <div id="previous-result-copy-message" class="muted" style="font-size: 14px;"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div id="end-dialog" class="dialog-backdrop">
+      <div class="dialog">
+        <div class="dialog-title">現在の入力内容を破棄してSessionを終了しますか？</div>
+        <div class="grid-2">
+          <button id="end-dialog-cancel" class="button secondary" type="button">キャンセル</button>
+          <button id="end-dialog-confirm" class="button" type="button">終了</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const STORAGE_KEY = "climbing:lastSession";
+      const screens = {
+        home: document.getElementById("screen-home"),
+        session: document.getElementById("screen-session"),
+        edit: document.getElementById("screen-edit"),
+        result: document.getElementById("screen-result"),
+        previousResult: document.getElementById("screen-previous-result"),
+      };
+
+      const state = {
+        screen: "home",
+        sessionType: "",
+        problems: [],
+        editor: createInitialEditorState(""),
+        editingIndex: null,
+        editState: null,
+        lastSessionResults: loadLastSession(),
+      };
+
+      const GRADE_OPTIONS = ["5級", "4級", "3級", "2級", "1級", "初段", "2段"];
+      const PROBLEM_TYPE_OPTIONS = ["スラブ", "垂壁", "強傾斜", "ルーフ", "カチ", "ピンチ", "バランス", "デッド", "その他"];
+
+      function createInitialEditorState(previousGrade) {
+        return {
+          grade: previousGrade || "",
+          tryCount: 1,
+          problemType: "",
+          memo: "",
+        };
+      }
+
+      function getStatusLabel(status) {
+        return status === "sent" ? "完登" : "未登";
+      }
+
+      function getSessionLabel(sessionType) {
+        return sessionType === "volume" ? "容量" : "最大";
+      }
+
+      function formatResultText(sessionType, problems) {
+        const lines = [
+          `Session: ${getSessionLabel(sessionType)}`,
+          "",
+          ...problems.map((problem, index) => {
+            const memoText = problem.memo.trim() ? problem.memo.trim() : "メモなし";
+            return `${index + 1}. ${problem.grade} / ${problem.problemType} / ${problem.tryCount}トライ / ${getStatusLabel(problem.status)} / ${memoText}`;
+          }),
+        ];
+        return lines.join("
+");
+      }
+
+      function validateProblem(params) {
+        if (!params.grade) return "グレードを選択してください。";
+        if (!params.problemType) return "課題タイプを選択してください。";
+        if ((params.memo || "").length > 20) return "メモは20文字以内で入力してください。";
+        if (params.requireStatus && !params.status) return "完登 / 未登を選択してください。";
+        return null;
+      }
+
+      function saveLastSession(result) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
+      }
+
+      function loadLastSession() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          return raw ? JSON.parse(raw) : null;
+        } catch {
+          return null;
+        }
+      }
+
+      function showScreen(name) {
+        state.screen = name;
+        Object.values(screens).forEach((screen) => screen.classList.remove("active"));
+        if (name === "previous-result") {
+          screens.previousResult.classList.add("active");
+        } else {
+          screens[name].classList.add("active");
+        }
+        render();
+      }
+
+      function renderSelect(selectEl, options, value) {
+        selectEl.innerHTML = "";
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "選択してください";
+        selectEl.appendChild(placeholder);
+
+        options.forEach((option) => {
+          const el = document.createElement("option");
+          el.value = option;
+          el.textContent = option;
+          if (option === value) el.selected = true;
+          selectEl.appendChild(el);
+        });
+      }
+
+      function renderSessionResultList() {
+        const list = document.getElementById("session-result-list");
+        list.innerHTML = "";
+        if (state.problems.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "muted";
+          empty.style.fontSize = "14px";
+          empty.textContent = "まだ記録がありません。";
+          list.appendChild(empty);
+          return;
+        }
+
+        state.problems.slice().reverse().forEach((problem, reverseIndex) => {
+          const index = state.problems.length - reverseIndex;
+          const item = document.createElement("div");
+          item.className = "result-item";
+          item.innerHTML = `
+            <div class="result-row">
+              <span class="result-no">${index}.</span>
+              <span class="result-main">${escapeHtml(problem.grade)} / ${escapeHtml(problem.problemType)}</span>
+              <span>${problem.tryCount}トライ / ${getStatusLabel(problem.status)}</span>
+              <span class="muted">${escapeHtml(problem.memo.trim() ? problem.memo : "メモなし")}</span>
+            </div>
+          `;
+          list.appendChild(item);
+        });
+      }
+
+      function renderEditList() {
+        const list = document.getElementById("edit-list");
+        list.innerHTML = "";
+        if (state.problems.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "muted";
+          empty.style.fontSize = "14px";
+          empty.textContent = "まだ記録がありません。";
+          list.appendChild(empty);
+          return;
+        }
+
+        state.problems.forEach((problem, index) => {
+          const item = document.createElement("div");
+          item.className = "edit-item";
+          item.innerHTML = `
+            <div class="edit-item-header">
+              <div class="stack-sm" style="gap:4px; font-size:14px;">
+                <div style="font-weight:700;">${index + 1}. ${escapeHtml(problem.grade)} / ${escapeHtml(problem.problemType)}</div>
+                <div>${problem.tryCount}トライ / ${getStatusLabel(problem.status)}</div>
+                <div class="muted">${escapeHtml(problem.memo.trim() ? problem.memo : "メモなし")}</div>
+              </div>
+              <div class="icon-buttons">
+                <button class="button ghost icon-button" type="button" data-edit-index="${index}">編集</button>
+                <button class="button ghost icon-button" type="button" data-delete-index="${index}">削除</button>
+              </div>
+            </div>
+          `;
+          list.appendChild(item);
+        });
+      }
+
+      function renderResultList(containerId, problems) {
+        const list = document.getElementById(containerId);
+        list.innerHTML = "";
+        problems.forEach((problem, index) => {
+          const item = document.createElement("div");
+          item.className = "edit-item";
+          item.innerHTML = `
+            <div class="stack-sm" style="gap:4px; font-size:14px;">
+              <div style="font-weight:700;">${index + 1}. ${escapeHtml(problem.grade)} / ${escapeHtml(problem.problemType)}</div>
+              <div>${problem.tryCount}トライ / ${getStatusLabel(problem.status)}</div>
+              <div class="muted">${escapeHtml(problem.memo.trim() ? problem.memo : "メモなし")}</div>
+            </div>
+          `;
+          list.appendChild(item);
+        });
+      }
+
+      function renderEditForm() {
+        const form = document.getElementById("edit-form");
+        const grade = document.getElementById("edit-grade");
+        const type = document.getElementById("edit-problem-type");
+        const tryCount = document.getElementById("edit-try-count");
+        const memo = document.getElementById("edit-memo");
+        const memoCount = document.getElementById("edit-memo-count");
+        const sentBtn = document.getElementById("edit-status-sent");
+        const unsentBtn = document.getElementById("edit-status-unsent");
+
+        if (!state.editState) {
+          form.style.display = "none";
+          return;
+        }
+
+        form.style.display = "grid";
+        renderSelect(grade, GRADE_OPTIONS, state.editState.grade);
+        renderSelect(type, PROBLEM_TYPE_OPTIONS, state.editState.problemType);
+        tryCount.textContent = String(state.editState.tryCount);
+        memo.value = state.editState.memo;
+        memoCount.textContent = `${state.editState.memo.length}/20`;
+        sentBtn.className = `button ${state.editState.status === "sent" ? "" : "secondary"}`.trim();
+        unsentBtn.className = `button ${state.editState.status === "unsent" ? "" : "secondary"}`.trim();
+      }
+
+      function renderHome() {
+        const volume = document.getElementById("home-type-volume");
+        const max = document.getElementById("home-type-max");
+        const start = document.getElementById("home-start");
+        const previous = document.getElementById("home-previous");
+
+        volume.className = `button ${state.sessionType === "volume" ? "" : "secondary"}`.trim();
+        max.className = `button ${state.sessionType === "max" ? "" : "secondary"}`.trim();
+        start.disabled = !state.sessionType;
+        previous.disabled = !state.lastSessionResults;
+      }
+
+      function renderSession() {
+        document.getElementById("session-count").textContent = `記録済み ${state.problems.length}件`;
+        renderSelect(document.getElementById("session-grade"), GRADE_OPTIONS, state.editor.grade);
+        renderSelect(document.getElementById("session-problem-type"), PROBLEM_TYPE_OPTIONS, state.editor.problemType);
+        document.getElementById("session-try-count").textContent = String(state.editor.tryCount);
+        document.getElementById("session-memo").value = state.editor.memo;
+        document.getElementById("session-memo-count").textContent = `${state.editor.memo.length}/20`;
+        renderSessionResultList();
+      }
+
+      function renderResult() {
+        renderResultList("result-list", state.problems);
+        document.getElementById("result-text").textContent = state.sessionType
+          ? formatResultText(state.sessionType, state.problems)
+          : "";
+      }
+
+      function renderPreviousResult() {
+        const text = document.getElementById("previous-result-text");
+        if (!state.lastSessionResults) {
+          text.textContent = "前回Resultはありません。";
+          return;
+        }
+        text.textContent = formatResultText(state.lastSessionResults.sessionType, state.lastSessionResults.problems);
+      }
+
+      function render() {
+        renderHome();
+        renderSession();
+        renderEditList();
+        renderEditForm();
+        renderResult();
+        renderPreviousResult();
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      async function copyText(text, messageElementId) {
+        const target = document.getElementById(messageElementId);
+        try {
+          await navigator.clipboard.writeText(text);
+          target.textContent = "コピーしました";
+        } catch {
+          target.textContent = "コピーに失敗しました";
+        }
+        window.setTimeout(() => {
+          target.textContent = "";
+        }, 2000);
+      }
+
+      function bindEvents() {
+        document.getElementById("home-type-volume").addEventListener("click", () => {
+          state.sessionType = "volume";
+          renderHome();
+        });
+
+        document.getElementById("home-type-max").addEventListener("click", () => {
+          state.sessionType = "max";
+          renderHome();
+        });
+
+        document.getElementById("home-start").addEventListener("click", () => {
+          if (!state.sessionType) return;
+          state.problems = [];
+          state.editor = createInitialEditorState("");
+          state.editingIndex = null;
+          state.editState = null;
+          showScreen("session");
+        });
+
+        document.getElementById("home-previous").addEventListener("click", () => {
+          showScreen("previous-result");
+        });
+
+        document.getElementById("session-edit-open").addEventListener("click", () => {
+          showScreen("edit");
+        });
+
+        document.getElementById("session-grade").addEventListener("change", (e) => {
+          state.editor.grade = e.target.value;
+        });
+
+        document.getElementById("session-problem-type").addEventListener("change", (e) => {
+          state.editor.problemType = e.target.value;
+        });
+
+        document.getElementById("session-memo").addEventListener("input", (e) => {
+          state.editor.memo = e.target.value;
+          document.getElementById("session-memo-count").textContent = `${state.editor.memo.length}/20`;
+        });
+
+        document.getElementById("session-try-plus").addEventListener("click", () => {
+          state.editor.tryCount += 1;
+          renderSession();
+        });
+
+        document.getElementById("session-record-sent").addEventListener("click", () => {
+          recordProblem("sent");
+        });
+
+        document.getElementById("session-record-unsent").addEventListener("click", () => {
+          recordProblem("unsent");
+        });
+
+        document.getElementById("session-end").addEventListener("click", () => {
+          document.getElementById("end-dialog").classList.add("open");
+        });
+
+        document.getElementById("end-dialog-cancel").addEventListener("click", () => {
+          document.getElementById("end-dialog").classList.remove("open");
+        });
+
+        document.getElementById("end-dialog-confirm").addEventListener("click", () => {
+          if (!state.sessionType) return;
+          const result = {
+            sessionType: state.sessionType,
+            endedAt: new Date().toISOString(),
+            problems: [...state.problems],
+          };
+          saveLastSession(result);
+          state.lastSessionResults = result;
+          document.getElementById("end-dialog").classList.remove("open");
+          showScreen("result");
+        });
+
+        document.getElementById("edit-list").addEventListener("click", (e) => {
+          const editIndex = e.target.getAttribute("data-edit-index");
+          const deleteIndex = e.target.getAttribute("data-delete-index");
+
+          if (editIndex !== null) {
+            const index = Number(editIndex);
+            state.editingIndex = index;
+            state.editState = { ...state.problems[index] };
+            renderEditForm();
+            return;
+          }
+
+          if (deleteIndex !== null) {
+            const index = Number(deleteIndex);
+            state.problems = state.problems.filter((_, i) => i !== index);
+            if (state.editingIndex === index) {
+              state.editingIndex = null;
+              state.editState = null;
+            } else if (state.editingIndex !== null && state.editingIndex > index) {
+              state.editingIndex -= 1;
+            }
+            render();
+          }
+        });
+
+        document.getElementById("edit-grade").addEventListener("change", (e) => {
+          if (!state.editState) return;
+          state.editState.grade = e.target.value;
+        });
+
+        document.getElementById("edit-problem-type").addEventListener("change", (e) => {
+          if (!state.editState) return;
+          state.editState.problemType = e.target.value;
+        });
+
+        document.getElementById("edit-memo").addEventListener("input", (e) => {
+          if (!state.editState) return;
+          state.editState.memo = e.target.value;
+          document.getElementById("edit-memo-count").textContent = `${state.editState.memo.length}/20`;
+        });
+
+        document.getElementById("edit-try-minus").addEventListener("click", () => {
+          if (!state.editState) return;
+          state.editState.tryCount = Math.max(1, state.editState.tryCount - 1);
+          renderEditForm();
+        });
+
+        document.getElementById("edit-try-plus").addEventListener("click", () => {
+          if (!state.editState) return;
+          state.editState.tryCount += 1;
+          renderEditForm();
+        });
+
+        document.getElementById("edit-status-sent").addEventListener("click", () => {
+          if (!state.editState) return;
+          state.editState.status = "sent";
+          renderEditForm();
+        });
+
+        document.getElementById("edit-status-unsent").addEventListener("click", () => {
+          if (!state.editState) return;
+          state.editState.status = "unsent";
+          renderEditForm();
+        });
+
+        document.getElementById("edit-save").addEventListener("click", () => {
+          if (state.editingIndex === null || !state.editState) return;
+          const error = validateProblem({
+            grade: state.editState.grade,
+            problemType: state.editState.problemType,
+            memo: state.editState.memo,
+            status: state.editState.status,
+            requireStatus: true,
+          });
+          if (error) {
+            window.alert(error);
+            return;
+          }
+          state.problems[state.editingIndex] = { ...state.editState };
+          state.editingIndex = null;
+          state.editState = null;
+          render();
+        });
+
         document.getElementById("edit-cancel").addEventListener("click", () => {
           state.editingIndex = null;
           state.editState = null;
