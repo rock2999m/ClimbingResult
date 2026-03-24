@@ -2,7 +2,7 @@
   "name": "Climbing Session Recorder",
   "short_name": "ClimbRec",
   "description": "クライミングのセッション記録用アプリ",
-  "start_url": "/<REPO_NAME>/",
+  "start_url": "/ClimbingResult/",
   "display": "standalone",
   "background_color": "#f1f5f9",
   "theme_color": "#0f172a",
