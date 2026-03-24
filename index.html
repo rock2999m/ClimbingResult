@@ -390,9 +390,9 @@
                 <div class="field">
                   <div class="label">トライ回数</div>
                   <div style="display: flex; align-items: center; gap: 8px;">
-                    <button id="edit-try-minus" class="button ghost icon-button" type="button">−</button>
+                    <button id="edit-try-minus" class="button ghost icon-button" type="button">-</button>
                     <div id="edit-try-count" class="count-box" style="min-width: 80px; min-height: 48px; font-size: 20px;">1</div>
-                    <button id="edit-try-plus" class="button ghost icon-button" type="button">＋</button>
+                    <button id="edit-try-plus" class="button ghost icon-button" type="button">+</button>
                   </div>
                 </div>
 
@@ -467,34 +467,34 @@
     </div>
 
     <script>
-      const STORAGE_KEY = "climbing:lastSession";
-      const screens = {
+      var STORAGE_KEY = "climbing:lastSession";
+      var screens = {
         home: document.getElementById("screen-home"),
         session: document.getElementById("screen-session"),
         edit: document.getElementById("screen-edit"),
         result: document.getElementById("screen-result"),
-        previousResult: document.getElementById("screen-previous-result"),
+        previousResult: document.getElementById("screen-previous-result")
       };
 
-      const state = {
+      var GRADE_OPTIONS = ["5級", "4級", "3級", "2級", "1級", "初段", "2段"];
+      var PROBLEM_TYPE_OPTIONS = ["スラブ", "垂壁", "強傾斜", "ルーフ", "カチ", "ピンチ", "バランス", "デッド", "その他"];
+
+      var state = {
         screen: "home",
         sessionType: "",
         problems: [],
         editor: createInitialEditorState(""),
         editingIndex: null,
         editState: null,
-        lastSessionResults: loadLastSession(),
+        lastSessionResults: loadLastSession()
       };
-
-      const GRADE_OPTIONS = ["5級", "4級", "3級", "2級", "1級", "初段", "2段"];
-      const PROBLEM_TYPE_OPTIONS = ["スラブ", "垂壁", "強傾斜", "ルーフ", "カチ", "ピンチ", "バランス", "デッド", "その他"];
 
       function createInitialEditorState(previousGrade) {
         return {
           grade: previousGrade || "",
           tryCount: 1,
           problemType: "",
-          memo: "",
+          memo: ""
         };
       }
 
@@ -507,14 +507,12 @@
       }
 
       function formatResultText(sessionType, problems) {
-        const lines = [
-          `Session: ${getSessionLabel(sessionType)}`,
-          "",
-          ...problems.map((problem, index) => {
-            const memoText = problem.memo.trim() ? problem.memo.trim() : "メモなし";
-            return `${index + 1}. ${problem.grade} / ${problem.problemType} / ${problem.tryCount}トライ / ${getStatusLabel(problem.status)} / ${memoText}`;
-          }),
-        ];
+        var lines = ["Session: " + getSessionLabel(sessionType), ""];
+        for (var i = 0; i < problems.length; i += 1) {
+          var problem = problems[i];
+          var memoText = problem.memo && problem.memo.trim() ? problem.memo.trim() : "メモなし";
+          lines.push((i + 1) + ". " + problem.grade + " / " + problem.problemType + " / " + problem.tryCount + "トライ / " + getStatusLabel(problem.status) + " / " + memoText);
+        }
         return lines.join("
 ");
       }
@@ -533,45 +531,73 @@
 
       function loadLastSession() {
         try {
-          const raw = localStorage.getItem(STORAGE_KEY);
+          var raw = localStorage.getItem(STORAGE_KEY);
           return raw ? JSON.parse(raw) : null;
-        } catch {
+        } catch (error) {
           return null;
+        }
+      }
+
+      function escapeHtml(value) {
+        var div = document.createElement("div");
+        div.textContent = String(value);
+        return div.innerHTML;
+      }
+
+      function renderSelect(selectEl, options, value) {
+        selectEl.innerHTML = "";
+        var placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "選択してください";
+        selectEl.appendChild(placeholder);
+
+        for (var i = 0; i < options.length; i += 1) {
+          var option = options[i];
+          var el = document.createElement("option");
+          el.value = option;
+          el.textContent = option;
+          if (option === value) {
+            el.selected = true;
+          }
+          selectEl.appendChild(el);
         }
       }
 
       function showScreen(name) {
         state.screen = name;
-        Object.values(screens).forEach((screen) => screen.classList.remove("active"));
+        screens.home.classList.remove("active");
+        screens.session.classList.remove("active");
+        screens.edit.classList.remove("active");
+        screens.result.classList.remove("active");
+        screens.previousResult.classList.remove("active");
+
         if (name === "previous-result") {
           screens.previousResult.classList.add("active");
         } else {
           screens[name].classList.add("active");
         }
+
         render();
       }
 
-      function renderSelect(selectEl, options, value) {
-        selectEl.innerHTML = "";
-        const placeholder = document.createElement("option");
-        placeholder.value = "";
-        placeholder.textContent = "選択してください";
-        selectEl.appendChild(placeholder);
+      function renderHome() {
+        var volume = document.getElementById("home-type-volume");
+        var max = document.getElementById("home-type-max");
+        var start = document.getElementById("home-start");
+        var previous = document.getElementById("home-previous");
 
-        options.forEach((option) => {
-          const el = document.createElement("option");
-          el.value = option;
-          el.textContent = option;
-          if (option === value) el.selected = true;
-          selectEl.appendChild(el);
-        });
+        volume.className = state.sessionType === "volume" ? "button" : "button secondary";
+        max.className = state.sessionType === "max" ? "button" : "button secondary";
+        start.disabled = !state.sessionType;
+        previous.disabled = !state.lastSessionResults;
       }
 
       function renderSessionResultList() {
-        const list = document.getElementById("session-result-list");
+        var list = document.getElementById("session-result-list");
         list.innerHTML = "";
+
         if (state.problems.length === 0) {
-          const empty = document.createElement("div");
+          var empty = document.createElement("div");
           empty.className = "muted";
           empty.style.fontSize = "14px";
           empty.textContent = "まだ記録がありません。";
@@ -579,27 +605,37 @@
           return;
         }
 
-        state.problems.slice().reverse().forEach((problem, reverseIndex) => {
-          const index = state.problems.length - reverseIndex;
-          const item = document.createElement("div");
+        for (var i = state.problems.length - 1; i >= 0; i -= 1) {
+          var problem = state.problems[i];
+          var index = i + 1;
+          var item = document.createElement("div");
           item.className = "result-item";
-          item.innerHTML = `
-            <div class="result-row">
-              <span class="result-no">${index}.</span>
-              <span class="result-main">${escapeHtml(problem.grade)} / ${escapeHtml(problem.problemType)}</span>
-              <span>${problem.tryCount}トライ / ${getStatusLabel(problem.status)}</span>
-              <span class="muted">${escapeHtml(problem.memo.trim() ? problem.memo : "メモなし")}</span>
-            </div>
-          `;
+          item.innerHTML = '<div class="result-row">' +
+            '<span class="result-no">' + index + '.</span>' +
+            '<span class="result-main">' + escapeHtml(problem.grade) + ' / ' + escapeHtml(problem.problemType) + '</span>' +
+            '<span>' + problem.tryCount + 'トライ / ' + getStatusLabel(problem.status) + '</span>' +
+            '<span class="muted">' + escapeHtml(problem.memo && problem.memo.trim() ? problem.memo : "メモなし") + '</span>' +
+          '</div>';
           list.appendChild(item);
-        });
+        }
+      }
+
+      function renderSession() {
+        document.getElementById("session-count").textContent = "記録済み " + state.problems.length + "件";
+        renderSelect(document.getElementById("session-grade"), GRADE_OPTIONS, state.editor.grade);
+        renderSelect(document.getElementById("session-problem-type"), PROBLEM_TYPE_OPTIONS, state.editor.problemType);
+        document.getElementById("session-try-count").textContent = String(state.editor.tryCount);
+        document.getElementById("session-memo").value = state.editor.memo;
+        document.getElementById("session-memo-count").textContent = state.editor.memo.length + "/20";
+        renderSessionResultList();
       }
 
       function renderEditList() {
-        const list = document.getElementById("edit-list");
+        var list = document.getElementById("edit-list");
         list.innerHTML = "";
+
         if (state.problems.length === 0) {
-          const empty = document.createElement("div");
+          var empty = document.createElement("div");
           empty.className = "muted";
           empty.style.fontSize = "14px";
           empty.textContent = "まだ記録がありません。";
@@ -607,52 +643,34 @@
           return;
         }
 
-        state.problems.forEach((problem, index) => {
-          const item = document.createElement("div");
+        for (var i = 0; i < state.problems.length; i += 1) {
+          var problem = state.problems[i];
+          var item = document.createElement("div");
           item.className = "edit-item";
-          item.innerHTML = `
-            <div class="edit-item-header">
-              <div class="stack-sm" style="gap:4px; font-size:14px;">
-                <div style="font-weight:700;">${index + 1}. ${escapeHtml(problem.grade)} / ${escapeHtml(problem.problemType)}</div>
-                <div>${problem.tryCount}トライ / ${getStatusLabel(problem.status)}</div>
-                <div class="muted">${escapeHtml(problem.memo.trim() ? problem.memo : "メモなし")}</div>
-              </div>
-              <div class="icon-buttons">
-                <button class="button ghost icon-button" type="button" data-edit-index="${index}">編集</button>
-                <button class="button ghost icon-button" type="button" data-delete-index="${index}">削除</button>
-              </div>
-            </div>
-          `;
+          item.innerHTML = '<div class="edit-item-header">' +
+            '<div class="stack-sm" style="gap:4px; font-size:14px;">' +
+              '<div style="font-weight:700;">' + (i + 1) + '. ' + escapeHtml(problem.grade) + ' / ' + escapeHtml(problem.problemType) + '</div>' +
+              '<div>' + problem.tryCount + 'トライ / ' + getStatusLabel(problem.status) + '</div>' +
+              '<div class="muted">' + escapeHtml(problem.memo && problem.memo.trim() ? problem.memo : "メモなし") + '</div>' +
+            '</div>' +
+            '<div class="icon-buttons">' +
+              '<button class="button ghost icon-button" type="button" data-edit-index="' + i + '">編集</button>' +
+              '<button class="button ghost icon-button" type="button" data-delete-index="' + i + '">削除</button>' +
+            '</div>' +
+          '</div>';
           list.appendChild(item);
-        });
-      }
-
-      function renderResultList(containerId, problems) {
-        const list = document.getElementById(containerId);
-        list.innerHTML = "";
-        problems.forEach((problem, index) => {
-          const item = document.createElement("div");
-          item.className = "edit-item";
-          item.innerHTML = `
-            <div class="stack-sm" style="gap:4px; font-size:14px;">
-              <div style="font-weight:700;">${index + 1}. ${escapeHtml(problem.grade)} / ${escapeHtml(problem.problemType)}</div>
-              <div>${problem.tryCount}トライ / ${getStatusLabel(problem.status)}</div>
-              <div class="muted">${escapeHtml(problem.memo.trim() ? problem.memo : "メモなし")}</div>
-            </div>
-          `;
-          list.appendChild(item);
-        });
+        }
       }
 
       function renderEditForm() {
-        const form = document.getElementById("edit-form");
-        const grade = document.getElementById("edit-grade");
-        const type = document.getElementById("edit-problem-type");
-        const tryCount = document.getElementById("edit-try-count");
-        const memo = document.getElementById("edit-memo");
-        const memoCount = document.getElementById("edit-memo-count");
-        const sentBtn = document.getElementById("edit-status-sent");
-        const unsentBtn = document.getElementById("edit-status-unsent");
+        var form = document.getElementById("edit-form");
+        var grade = document.getElementById("edit-grade");
+        var type = document.getElementById("edit-problem-type");
+        var tryCount = document.getElementById("edit-try-count");
+        var memo = document.getElementById("edit-memo");
+        var memoCount = document.getElementById("edit-memo-count");
+        var sentBtn = document.getElementById("edit-status-sent");
+        var unsentBtn = document.getElementById("edit-status-unsent");
 
         if (!state.editState) {
           form.style.display = "none";
@@ -664,42 +682,34 @@
         renderSelect(type, PROBLEM_TYPE_OPTIONS, state.editState.problemType);
         tryCount.textContent = String(state.editState.tryCount);
         memo.value = state.editState.memo;
-        memoCount.textContent = `${state.editState.memo.length}/20`;
-        sentBtn.className = `button ${state.editState.status === "sent" ? "" : "secondary"}`.trim();
-        unsentBtn.className = `button ${state.editState.status === "unsent" ? "" : "secondary"}`.trim();
+        memoCount.textContent = state.editState.memo.length + "/20";
+        sentBtn.className = state.editState.status === "sent" ? "button" : "button secondary";
+        unsentBtn.className = state.editState.status === "unsent" ? "button" : "button secondary";
       }
 
-      function renderHome() {
-        const volume = document.getElementById("home-type-volume");
-        const max = document.getElementById("home-type-max");
-        const start = document.getElementById("home-start");
-        const previous = document.getElementById("home-previous");
-
-        volume.className = `button ${state.sessionType === "volume" ? "" : "secondary"}`.trim();
-        max.className = `button ${state.sessionType === "max" ? "" : "secondary"}`.trim();
-        start.disabled = !state.sessionType;
-        previous.disabled = !state.lastSessionResults;
-      }
-
-      function renderSession() {
-        document.getElementById("session-count").textContent = `記録済み ${state.problems.length}件`;
-        renderSelect(document.getElementById("session-grade"), GRADE_OPTIONS, state.editor.grade);
-        renderSelect(document.getElementById("session-problem-type"), PROBLEM_TYPE_OPTIONS, state.editor.problemType);
-        document.getElementById("session-try-count").textContent = String(state.editor.tryCount);
-        document.getElementById("session-memo").value = state.editor.memo;
-        document.getElementById("session-memo-count").textContent = `${state.editor.memo.length}/20`;
-        renderSessionResultList();
+      function renderResultList(containerId, problems) {
+        var list = document.getElementById(containerId);
+        list.innerHTML = "";
+        for (var i = 0; i < problems.length; i += 1) {
+          var problem = problems[i];
+          var item = document.createElement("div");
+          item.className = "edit-item";
+          item.innerHTML = '<div class="stack-sm" style="gap:4px; font-size:14px;">' +
+            '<div style="font-weight:700;">' + (i + 1) + '. ' + escapeHtml(problem.grade) + ' / ' + escapeHtml(problem.problemType) + '</div>' +
+            '<div>' + problem.tryCount + 'トライ / ' + getStatusLabel(problem.status) + '</div>' +
+            '<div class="muted">' + escapeHtml(problem.memo && problem.memo.trim() ? problem.memo : "メモなし") + '</div>' +
+          '</div>';
+          list.appendChild(item);
+        }
       }
 
       function renderResult() {
         renderResultList("result-list", state.problems);
-        document.getElementById("result-text").textContent = state.sessionType
-          ? formatResultText(state.sessionType, state.problems)
-          : "";
+        document.getElementById("result-text").textContent = state.sessionType ? formatResultText(state.sessionType, state.problems) : "";
       }
 
       function renderPreviousResult() {
-        const text = document.getElementById("previous-result-text");
+        var text = document.getElementById("previous-result-text");
         if (!state.lastSessionResults) {
           text.textContent = "前回Resultはありません。";
           return;
@@ -716,230 +726,26 @@
         renderPreviousResult();
       }
 
-      function escapeHtml(value) {
-        return String(value)
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;")
-          .replaceAll('"', "&quot;")
-          .replaceAll("'", "&#39;");
-      }
-
-      async function copyText(text, messageElementId) {
-        const target = document.getElementById(messageElementId);
-        try {
-          await navigator.clipboard.writeText(text);
+      function copyText(text, messageElementId) {
+        var target = document.getElementById(messageElementId);
+        navigator.clipboard.writeText(text).then(function () {
           target.textContent = "コピーしました";
-        } catch {
+          window.setTimeout(function () {
+            target.textContent = "";
+          }, 2000);
+        }).catch(function () {
           target.textContent = "コピーに失敗しました";
-        }
-        window.setTimeout(() => {
-          target.textContent = "";
-        }, 2000);
-      }
-
-      function bindEvents() {
-        document.getElementById("home-type-volume").addEventListener("click", () => {
-          state.sessionType = "volume";
-          renderHome();
-        });
-
-        document.getElementById("home-type-max").addEventListener("click", () => {
-          state.sessionType = "max";
-          renderHome();
-        });
-
-        document.getElementById("home-start").addEventListener("click", () => {
-          if (!state.sessionType) return;
-          state.problems = [];
-          state.editor = createInitialEditorState("");
-          state.editingIndex = null;
-          state.editState = null;
-          showScreen("session");
-        });
-
-        document.getElementById("home-previous").addEventListener("click", () => {
-          showScreen("previous-result");
-        });
-
-        document.getElementById("session-edit-open").addEventListener("click", () => {
-          showScreen("edit");
-        });
-
-        document.getElementById("session-grade").addEventListener("change", (e) => {
-          state.editor.grade = e.target.value;
-        });
-
-        document.getElementById("session-problem-type").addEventListener("change", (e) => {
-          state.editor.problemType = e.target.value;
-        });
-
-        document.getElementById("session-memo").addEventListener("input", (e) => {
-          state.editor.memo = e.target.value;
-          document.getElementById("session-memo-count").textContent = `${state.editor.memo.length}/20`;
-        });
-
-        document.getElementById("session-try-plus").addEventListener("click", () => {
-          state.editor.tryCount += 1;
-          renderSession();
-        });
-
-        document.getElementById("session-record-sent").addEventListener("click", () => {
-          recordProblem("sent");
-        });
-
-        document.getElementById("session-record-unsent").addEventListener("click", () => {
-          recordProblem("unsent");
-        });
-
-        document.getElementById("session-end").addEventListener("click", () => {
-          document.getElementById("end-dialog").classList.add("open");
-        });
-
-        document.getElementById("end-dialog-cancel").addEventListener("click", () => {
-          document.getElementById("end-dialog").classList.remove("open");
-        });
-
-        document.getElementById("end-dialog-confirm").addEventListener("click", () => {
-          if (!state.sessionType) return;
-          const result = {
-            sessionType: state.sessionType,
-            endedAt: new Date().toISOString(),
-            problems: [...state.problems],
-          };
-          saveLastSession(result);
-          state.lastSessionResults = result;
-          document.getElementById("end-dialog").classList.remove("open");
-          showScreen("result");
-        });
-
-        document.getElementById("edit-list").addEventListener("click", (e) => {
-          const editIndex = e.target.getAttribute("data-edit-index");
-          const deleteIndex = e.target.getAttribute("data-delete-index");
-
-          if (editIndex !== null) {
-            const index = Number(editIndex);
-            state.editingIndex = index;
-            state.editState = { ...state.problems[index] };
-            renderEditForm();
-            return;
-          }
-
-          if (deleteIndex !== null) {
-            const index = Number(deleteIndex);
-            state.problems = state.problems.filter((_, i) => i !== index);
-            if (state.editingIndex === index) {
-              state.editingIndex = null;
-              state.editState = null;
-            } else if (state.editingIndex !== null && state.editingIndex > index) {
-              state.editingIndex -= 1;
-            }
-            render();
-          }
-        });
-
-        document.getElementById("edit-grade").addEventListener("change", (e) => {
-          if (!state.editState) return;
-          state.editState.grade = e.target.value;
-        });
-
-        document.getElementById("edit-problem-type").addEventListener("change", (e) => {
-          if (!state.editState) return;
-          state.editState.problemType = e.target.value;
-        });
-
-        document.getElementById("edit-memo").addEventListener("input", (e) => {
-          if (!state.editState) return;
-          state.editState.memo = e.target.value;
-          document.getElementById("edit-memo-count").textContent = `${state.editState.memo.length}/20`;
-        });
-
-        document.getElementById("edit-try-minus").addEventListener("click", () => {
-          if (!state.editState) return;
-          state.editState.tryCount = Math.max(1, state.editState.tryCount - 1);
-          renderEditForm();
-        });
-
-        document.getElementById("edit-try-plus").addEventListener("click", () => {
-          if (!state.editState) return;
-          state.editState.tryCount += 1;
-          renderEditForm();
-        });
-
-        document.getElementById("edit-status-sent").addEventListener("click", () => {
-          if (!state.editState) return;
-          state.editState.status = "sent";
-          renderEditForm();
-        });
-
-        document.getElementById("edit-status-unsent").addEventListener("click", () => {
-          if (!state.editState) return;
-          state.editState.status = "unsent";
-          renderEditForm();
-        });
-
-        document.getElementById("edit-save").addEventListener("click", () => {
-          if (state.editingIndex === null || !state.editState) return;
-          const error = validateProblem({
-            grade: state.editState.grade,
-            problemType: state.editState.problemType,
-            memo: state.editState.memo,
-            status: state.editState.status,
-            requireStatus: true,
-          });
-          if (error) {
-            window.alert(error);
-            return;
-          }
-          state.problems[state.editingIndex] = { ...state.editState };
-          state.editingIndex = null;
-          state.editState = null;
-          render();
-        });
-
-        document.getElementById("edit-cancel").addEventListener("click", () => {
-          state.editingIndex = null;
-          state.editState = null;
-          renderEditForm();
-        });
-
-        document.getElementById("edit-back-session").addEventListener("click", () => {
-          showScreen("session");
-        });
-
-        document.getElementById("result-copy").addEventListener("click", () => {
-          if (!state.sessionType) return;
-          copyText(formatResultText(state.sessionType, state.problems), "result-copy-message");
-        });
-
-        document.getElementById("result-home").addEventListener("click", () => {
-          showScreen("home");
-        });
-
-        document.getElementById("previous-result-copy").addEventListener("click", () => {
-          if (!state.lastSessionResults) return;
-          copyText(
-            formatResultText(state.lastSessionResults.sessionType, state.lastSessionResults.problems),
-            "previous-result-copy-message"
-          );
-        });
-
-        document.getElementById("previous-result-home").addEventListener("click", () => {
-          showScreen("home");
-        });
-
-        document.getElementById("end-dialog").addEventListener("click", (e) => {
-          if (e.target.id === "end-dialog") {
-            document.getElementById("end-dialog").classList.remove("open");
-          }
+          window.setTimeout(function () {
+            target.textContent = "";
+          }, 2000);
         });
       }
 
       function recordProblem(status) {
-        const error = validateProblem({
+        var error = validateProblem({
           grade: state.editor.grade,
           problemType: state.editor.problemType,
-          memo: state.editor.memo,
+          memo: state.editor.memo
         });
         if (error) {
           window.alert(error);
@@ -951,20 +757,228 @@
           tryCount: state.editor.tryCount,
           problemType: state.editor.problemType,
           memo: state.editor.memo,
-          status,
+          status: status
         });
 
         state.editor = createInitialEditorState(state.editor.grade);
         render();
       }
 
+      function bindEvents() {
+        document.getElementById("home-type-volume").addEventListener("click", function () {
+          state.sessionType = "volume";
+          renderHome();
+        });
+
+        document.getElementById("home-type-max").addEventListener("click", function () {
+          state.sessionType = "max";
+          renderHome();
+        });
+
+        document.getElementById("home-start").addEventListener("click", function () {
+          if (!state.sessionType) return;
+          state.problems = [];
+          state.editor = createInitialEditorState("");
+          state.editingIndex = null;
+          state.editState = null;
+          showScreen("session");
+        });
+
+        document.getElementById("home-previous").addEventListener("click", function () {
+          showScreen("previous-result");
+        });
+
+        document.getElementById("session-edit-open").addEventListener("click", function () {
+          showScreen("edit");
+        });
+
+        document.getElementById("session-grade").addEventListener("change", function (e) {
+          state.editor.grade = e.target.value;
+        });
+
+        document.getElementById("session-problem-type").addEventListener("change", function (e) {
+          state.editor.problemType = e.target.value;
+        });
+
+        document.getElementById("session-memo").addEventListener("input", function (e) {
+          state.editor.memo = e.target.value;
+          document.getElementById("session-memo-count").textContent = state.editor.memo.length + "/20";
+        });
+
+        document.getElementById("session-try-plus").addEventListener("click", function () {
+          state.editor.tryCount += 1;
+          renderSession();
+        });
+
+        document.getElementById("session-record-sent").addEventListener("click", function () {
+          recordProblem("sent");
+        });
+
+        document.getElementById("session-record-unsent").addEventListener("click", function () {
+          recordProblem("unsent");
+        });
+
+        document.getElementById("session-end").addEventListener("click", function () {
+          document.getElementById("end-dialog").classList.add("open");
+        });
+
+        document.getElementById("end-dialog-cancel").addEventListener("click", function () {
+          document.getElementById("end-dialog").classList.remove("open");
+        });
+
+        document.getElementById("end-dialog-confirm").addEventListener("click", function () {
+          if (!state.sessionType) return;
+          var result = {
+            sessionType: state.sessionType,
+            endedAt: new Date().toISOString(),
+            problems: state.problems.slice()
+          };
+          saveLastSession(result);
+          state.lastSessionResults = result;
+          document.getElementById("end-dialog").classList.remove("open");
+          showScreen("result");
+        });
+
+        document.getElementById("edit-list").addEventListener("click", function (e) {
+          var target = e.target;
+          var editIndex = target.getAttribute("data-edit-index");
+          var deleteIndex = target.getAttribute("data-delete-index");
+
+          if (editIndex !== null) {
+            var editNumber = Number(editIndex);
+            state.editingIndex = editNumber;
+            state.editState = {
+              grade: state.problems[editNumber].grade,
+              tryCount: state.problems[editNumber].tryCount,
+              problemType: state.problems[editNumber].problemType,
+              memo: state.problems[editNumber].memo,
+              status: state.problems[editNumber].status
+            };
+            renderEditForm();
+            return;
+          }
+
+          if (deleteIndex !== null) {
+            var deleteNumber = Number(deleteIndex);
+            state.problems = state.problems.filter(function (_, i) {
+              return i !== deleteNumber;
+            });
+            if (state.editingIndex === deleteNumber) {
+              state.editingIndex = null;
+              state.editState = null;
+            } else if (state.editingIndex !== null && state.editingIndex > deleteNumber) {
+              state.editingIndex -= 1;
+            }
+            render();
+          }
+        });
+
+        document.getElementById("edit-grade").addEventListener("change", function (e) {
+          if (!state.editState) return;
+          state.editState.grade = e.target.value;
+        });
+
+        document.getElementById("edit-problem-type").addEventListener("change", function (e) {
+          if (!state.editState) return;
+          state.editState.problemType = e.target.value;
+        });
+
+        document.getElementById("edit-memo").addEventListener("input", function (e) {
+          if (!state.editState) return;
+          state.editState.memo = e.target.value;
+          document.getElementById("edit-memo-count").textContent = state.editState.memo.length + "/20";
+        });
+
+        document.getElementById("edit-try-minus").addEventListener("click", function () {
+          if (!state.editState) return;
+          state.editState.tryCount = Math.max(1, state.editState.tryCount - 1);
+          renderEditForm();
+        });
+
+        document.getElementById("edit-try-plus").addEventListener("click", function () {
+          if (!state.editState) return;
+          state.editState.tryCount += 1;
+          renderEditForm();
+        });
+
+        document.getElementById("edit-status-sent").addEventListener("click", function () {
+          if (!state.editState) return;
+          state.editState.status = "sent";
+          renderEditForm();
+        });
+
+        document.getElementById("edit-status-unsent").addEventListener("click", function () {
+          if (!state.editState) return;
+          state.editState.status = "unsent";
+          renderEditForm();
+        });
+
+        document.getElementById("edit-save").addEventListener("click", function () {
+          if (state.editingIndex === null || !state.editState) return;
+          var error = validateProblem({
+            grade: state.editState.grade,
+            problemType: state.editState.problemType,
+            memo: state.editState.memo,
+            status: state.editState.status,
+            requireStatus: true
+          });
+          if (error) {
+            window.alert(error);
+            return;
+          }
+          state.problems[state.editingIndex] = {
+            grade: state.editState.grade,
+            tryCount: state.editState.tryCount,
+            problemType: state.editState.problemType,
+            memo: state.editState.memo,
+            status: state.editState.status
+          };
+          state.editingIndex = null;
+          state.editState = null;
+          render();
+        });
+
+        document.getElementById("edit-cancel").addEventListener("click", function () {
+          state.editingIndex = null;
+          state.editState = null;
+          renderEditForm();
+        });
+
+        document.getElementById("edit-back-session").addEventListener("click", function () {
+          showScreen("session");
+        });
+
+        document.getElementById("result-copy").addEventListener("click", function () {
+          if (!state.sessionType) return;
+          copyText(formatResultText(state.sessionType, state.problems), "result-copy-message");
+        });
+
+        document.getElementById("result-home").addEventListener("click", function () {
+          showScreen("home");
+        });
+
+        document.getElementById("previous-result-copy").addEventListener("click", function () {
+          if (!state.lastSessionResults) return;
+          copyText(formatResultText(state.lastSessionResults.sessionType, state.lastSessionResults.problems), "previous-result-copy-message");
+        });
+
+        document.getElementById("previous-result-home").addEventListener("click", function () {
+          showScreen("home");
+        });
+
+        document.getElementById("end-dialog").addEventListener("click", function (e) {
+          if (e.target.id === "end-dialog") {
+            document.getElementById("end-dialog").classList.remove("open");
+          }
+        });
+      }
+
       bindEvents();
       render();
 
       if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker.register("./service-worker.js").catch(() => {
-            // no-op
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("./service-worker.js").catch(function () {
           });
         });
       }
