@@ -322,10 +322,14 @@
             <button id="session-edit-open" class="button ghost" type="button">編集</button>
           </div>
           <div class="stack" style="gap: 20px;">
-            <div class="grid-2">
+            <div class="stack-sm">
               <label class="field">
                 <span class="label">グレード</span>
                 <select id="session-grade" class="select"></select>
+              </label>
+              <label class="field">
+                <span class="label">壁の傾斜</span>
+                <select id="session-wall-angle" class="select"></select>
               </label>
               <label class="field">
                 <span class="label">課題タイプ</span>
@@ -380,6 +384,11 @@
                 <label class="field">
                   <span class="label">グレード</span>
                   <select id="edit-grade" class="select"></select>
+                </label>
+
+                <label class="field">
+                  <span class="label">壁の傾斜</span>
+                  <select id="edit-wall-angle" class="select"></select>
                 </label>
 
                 <label class="field">
@@ -477,7 +486,8 @@
       };
 
       var GRADE_OPTIONS = ["5級", "4級", "3級", "2級", "1級", "初段", "2段"];
-      var PROBLEM_TYPE_OPTIONS = ["スラブ", "垂壁", "強傾斜", "ルーフ", "カチ", "ピンチ", "バランス", "デッド", "その他"];
+      var WALL_ANGLE_OPTIONS = ["スラブ", "垂壁", "薄被り", "強傾斜", "ルーフ", "バルジ"];
+      var PROBLEM_TYPE_OPTIONS = ["バランス", "ランジ", "コーディネーション", "ストレニュアス"];
 
       var state = {
         screen: "home",
@@ -493,6 +503,7 @@
         return {
           grade: previousGrade || "",
           tryCount: 1,
+          wallAngle: "",
           problemType: "",
           memo: ""
         };
@@ -511,13 +522,14 @@
         for (var i = 0; i < problems.length; i += 1) {
           var problem = problems[i];
           var memoText = problem.memo && problem.memo.trim() ? problem.memo.trim() : "メモなし";
-          lines.push((i + 1) + ". " + problem.grade + " / " + problem.problemType + " / " + problem.tryCount + "トライ / " + getStatusLabel(problem.status) + " / " + memoText);
+          lines.push((i + 1) + ". " + problem.grade + " / " + problem.wallAngle + " / " + problem.problemType + " / " + problem.tryCount + "トライ / " + getStatusLabel(problem.status) + " / " + memoText);
         }
         return lines.join("\n");
       }
 
       function validateProblem(params) {
         if (!params.grade) return "グレードを選択してください。";
+        if (!params.wallAngle) return "壁の傾斜を選択してください。";
         if (!params.problemType) return "課題タイプを選択してください。";
         if ((params.memo || "").length > 20) return "メモは20文字以内で入力してください。";
         if (params.requireStatus && !params.status) return "完登 / 未登を選択してください。";
@@ -611,7 +623,7 @@
           item.className = "result-item";
           item.innerHTML = '<div class="result-row">' +
             '<span class="result-no">' + index + '.</span>' +
-            '<span class="result-main">' + escapeHtml(problem.grade) + ' / ' + escapeHtml(problem.problemType) + '</span>' +
+            '<span class="result-main">' + escapeHtml(problem.grade) + ' / ' + escapeHtml(problem.wallAngle) + ' / ' + escapeHtml(problem.problemType) + '</span>' +
             '<span>' + problem.tryCount + 'トライ / ' + getStatusLabel(problem.status) + '</span>' +
             '<span class="muted">' + escapeHtml(problem.memo && problem.memo.trim() ? problem.memo : "メモなし") + '</span>' +
           '</div>';
@@ -622,6 +634,7 @@
       function renderSession() {
         document.getElementById("session-count").textContent = "記録済み " + state.problems.length + "件";
         renderSelect(document.getElementById("session-grade"), GRADE_OPTIONS, state.editor.grade);
+        renderSelect(document.getElementById("session-wall-angle"), WALL_ANGLE_OPTIONS, state.editor.wallAngle);
         renderSelect(document.getElementById("session-problem-type"), PROBLEM_TYPE_OPTIONS, state.editor.problemType);
         document.getElementById("session-try-count").textContent = String(state.editor.tryCount);
         document.getElementById("session-memo").value = state.editor.memo;
@@ -648,7 +661,7 @@
           item.className = "edit-item";
           item.innerHTML = '<div class="edit-item-header">' +
             '<div class="stack-sm" style="gap:4px; font-size:14px;">' +
-              '<div style="font-weight:700;">' + (i + 1) + '. ' + escapeHtml(problem.grade) + ' / ' + escapeHtml(problem.problemType) + '</div>' +
+              '<div style="font-weight:700;">' + (i + 1) + '. ' + escapeHtml(problem.grade) + ' / ' + escapeHtml(problem.wallAngle) + ' / ' + escapeHtml(problem.problemType) + '</div>' +
               '<div>' + problem.tryCount + 'トライ / ' + getStatusLabel(problem.status) + '</div>' +
               '<div class="muted">' + escapeHtml(problem.memo && problem.memo.trim() ? problem.memo : "メモなし") + '</div>' +
             '</div>' +
@@ -664,6 +677,7 @@
       function renderEditForm() {
         var form = document.getElementById("edit-form");
         var grade = document.getElementById("edit-grade");
+        var wallAngle = document.getElementById("edit-wall-angle");
         var type = document.getElementById("edit-problem-type");
         var tryCount = document.getElementById("edit-try-count");
         var memo = document.getElementById("edit-memo");
@@ -678,6 +692,7 @@
 
         form.style.display = "grid";
         renderSelect(grade, GRADE_OPTIONS, state.editState.grade);
+        renderSelect(wallAngle, WALL_ANGLE_OPTIONS, state.editState.wallAngle);
         renderSelect(type, PROBLEM_TYPE_OPTIONS, state.editState.problemType);
         tryCount.textContent = String(state.editState.tryCount);
         memo.value = state.editState.memo;
@@ -694,7 +709,7 @@
           var item = document.createElement("div");
           item.className = "edit-item";
           item.innerHTML = '<div class="stack-sm" style="gap:4px; font-size:14px;">' +
-            '<div style="font-weight:700;">' + (i + 1) + '. ' + escapeHtml(problem.grade) + ' / ' + escapeHtml(problem.problemType) + '</div>' +
+            '<div style="font-weight:700;">' + (i + 1) + '. ' + escapeHtml(problem.grade) + ' / ' + escapeHtml(problem.wallAngle) + ' / ' + escapeHtml(problem.problemType) + '</div>' +
             '<div>' + problem.tryCount + 'トライ / ' + getStatusLabel(problem.status) + '</div>' +
             '<div class="muted">' + escapeHtml(problem.memo && problem.memo.trim() ? problem.memo : "メモなし") + '</div>' +
           '</div>';
@@ -743,6 +758,7 @@
       function recordProblem(status) {
         var error = validateProblem({
           grade: state.editor.grade,
+          wallAngle: state.editor.wallAngle,
           problemType: state.editor.problemType,
           memo: state.editor.memo
         });
@@ -753,6 +769,7 @@
 
         state.problems.push({
           grade: state.editor.grade,
+          wallAngle: state.editor.wallAngle,
           tryCount: state.editor.tryCount,
           problemType: state.editor.problemType,
           memo: state.editor.memo,
@@ -793,6 +810,10 @@
 
         document.getElementById("session-grade").addEventListener("change", function (e) {
           state.editor.grade = e.target.value;
+        });
+
+        document.getElementById("session-wall-angle").addEventListener("change", function (e) {
+          state.editor.wallAngle = e.target.value;
         });
 
         document.getElementById("session-problem-type").addEventListener("change", function (e) {
@@ -848,6 +869,7 @@
             state.editingIndex = editNumber;
             state.editState = {
               grade: state.problems[editNumber].grade,
+              wallAngle: state.problems[editNumber].wallAngle,
               tryCount: state.problems[editNumber].tryCount,
               problemType: state.problems[editNumber].problemType,
               memo: state.problems[editNumber].memo,
@@ -875,6 +897,11 @@
         document.getElementById("edit-grade").addEventListener("change", function (e) {
           if (!state.editState) return;
           state.editState.grade = e.target.value;
+        });
+
+        document.getElementById("edit-wall-angle").addEventListener("change", function (e) {
+          if (!state.editState) return;
+          state.editState.wallAngle = e.target.value;
         });
 
         document.getElementById("edit-problem-type").addEventListener("change", function (e) {
@@ -916,6 +943,7 @@
           if (state.editingIndex === null || !state.editState) return;
           var error = validateProblem({
             grade: state.editState.grade,
+            wallAngle: state.editState.wallAngle,
             problemType: state.editState.problemType,
             memo: state.editState.memo,
             status: state.editState.status,
@@ -927,6 +955,7 @@
           }
           state.problems[state.editingIndex] = {
             grade: state.editState.grade,
+            wallAngle: state.editState.wallAngle,
             tryCount: state.editState.tryCount,
             problemType: state.editState.problemType,
             memo: state.editState.memo,
