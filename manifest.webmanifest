@@ -1,6 +1,6 @@
 {
   "name": "Climbing Session Recorder",
-  "short_name": "ClimbRec",
+  "short_name": "Climbing Result",
   "description": "クライミングのセッション記録用アプリ",
   "start_url": "./",
   "display": "standalone",
