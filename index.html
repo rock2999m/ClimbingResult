@@ -281,6 +281,57 @@
         margin-bottom: 16px;
       }
 
+      .plus-button {
+        min-width: 72px;
+        min-height: 48px;
+        padding: 0;
+        border-radius: 16px;
+        font-size: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .menu-button-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 8px;
+      }
+
+      .menu-item {
+        border: 1px solid var(--line-soft);
+        border-radius: 14px;
+        background: #ffffff;
+        padding: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+      }
+
+      .menu-item-info {
+        flex: 1;
+        overflow: hidden;
+      }
+
+      .menu-item-grade {
+        font-weight: 700;
+      }
+
+      .menu-item-controls {
+        display: flex;
+        gap: 4px;
+      }
+
+      .small-button {
+        min-width: 32px;
+        min-height: 32px;
+        padding: 0;
+        border-radius: 8px;
+        font-size: 12px;
+      }
+
       @media (max-width: 760px) {
         .grid-2,
         .grid-edit {
@@ -295,6 +346,7 @@
         <div class="card">
           <div class="card-header">
             <h1 class="card-title">クライミング Session Recorder</h1>
+            <button id="home-menu-add" class="button secondary plus-button" type="button">+</button>
           </div>
           <div class="stack">
             <div class="stack-sm">
@@ -304,9 +356,52 @@
                 <button id="home-type-max" class="button secondary" type="button">最大</button>
               </div>
             </div>
+            <div id="home-menus" class="menu-button-grid"></div>
             <div class="grid-2">
               <button id="home-start" class="button" type="button" disabled>Session開始</button>
               <button id="home-previous" class="button secondary" type="button">前回のResultを表示</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-menu-manager" class="screen">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">トレーニングメニュー管理</h2>
+          </div>
+          <div class="stack">
+            <div id="menu-manager-list" class="edit-list"></div>
+            <div class="grid-2">
+              <button id="menu-manager-create" class="button" type="button">新規作成</button>
+              <button id="menu-manager-close" class="button secondary" type="button">戻る</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-menu-setup" class="screen">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">トレーニングメニュー設定</h2>
+          </div>
+          <div class="stack">
+            <label class="field">
+              <span class="label">メニュー名</span>
+              <input id="menu-setup-name" class="input" type="text" maxlength="20" placeholder="例: 3級サーキット" />
+            </label>
+
+            <div class="field">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="label">課題一覧</span>
+                <button id="menu-setup-add-problem" class="button ghost icon-button" type="button" style="min-width: auto; padding: 4px 8px; font-size: 14px;">+ 追加</button>
+              </div>
+              <div id="menu-setup-problems" class="edit-list"></div>
+            </div>
+
+            <div class="grid-2">
+              <button id="menu-setup-save" class="button" type="button">保存</button>
+              <button id="menu-setup-cancel" class="button secondary" type="button">キャンセル</button>
             </div>
           </div>
         </div>
@@ -477,6 +572,7 @@
 
     <script>
       var STORAGE_KEY = "climbing:lastSession";
+      var STORAGE_KEY_MENUS = "climbing:menus";
       var screens = {
         home: document.getElementById("screen-home"),
         session: document.getElementById("screen-session"),
@@ -492,11 +588,18 @@
       var state = {
         screen: "home",
         sessionType: "",
+        selectedMenuId: null,
+        menuProgress: null,
         problems: [],
         editor: createInitialEditorState(""),
         editingIndex: null,
         editState: null,
-        lastSessionResults: loadLastSession()
+        lastSessionResults: loadLastSession(),
+        menus: loadMenus(),
+        menuSetup: {
+          name: "",
+          problems: []
+        }
       };
 
       function createInitialEditorState(previousGrade) {
@@ -549,6 +652,23 @@
         }
       }
 
+      function saveMenus(menus) {
+        localStorage.setItem(STORAGE_KEY_MENUS, JSON.stringify(menus));
+      }
+
+      function loadMenus() {
+        try {
+          var raw = localStorage.getItem(STORAGE_KEY_MENUS);
+          return raw ? JSON.parse(raw) : [];
+        } catch (error) {
+          return [];
+        }
+      }
+
+      function createMenuId() {
+        return Date.now().toString(36) + Math.random().toString(36).substring(2);
+      }
+
       function escapeHtml(value) {
         var div = document.createElement("div");
         div.textContent = String(value);
@@ -576,16 +696,22 @@
 
       function showScreen(name) {
         state.screen = name;
-        screens.home.classList.remove("active");
-        screens.session.classList.remove("active");
-        screens.edit.classList.remove("active");
-        screens.result.classList.remove("active");
-        screens.previousResult.classList.remove("active");
+        document.getElementById("screen-home").classList.remove("active");
+        document.getElementById("screen-session").classList.remove("active");
+        document.getElementById("screen-edit").classList.remove("active");
+        document.getElementById("screen-result").classList.remove("active");
+        document.getElementById("screen-previous-result").classList.remove("active");
+        document.getElementById("screen-menu-setup").classList.remove("active");
+        document.getElementById("screen-menu-manager").classList.remove("active");
 
         if (name === "previous-result") {
-          screens.previousResult.classList.add("active");
+          document.getElementById("screen-previous-result").classList.add("active");
+        } else if (name === "menu-setup") {
+          document.getElementById("screen-menu-setup").classList.add("active");
+        } else if (name === "menu-manager") {
+          document.getElementById("screen-menu-manager").classList.add("active");
         } else {
-          screens[name].classList.add("active");
+          document.getElementById("screen-" + name).classList.add("active");
         }
 
         render();
@@ -596,11 +722,24 @@
         var max = document.getElementById("home-type-max");
         var start = document.getElementById("home-start");
         var previous = document.getElementById("home-previous");
+        var menusContainer = document.getElementById("home-menus");
 
         volume.className = state.sessionType === "volume" ? "button" : "button secondary";
         max.className = state.sessionType === "max" ? "button" : "button secondary";
-        start.disabled = !state.sessionType;
+        start.disabled = !state.sessionType && !state.selectedMenuId;
         previous.disabled = !state.lastSessionResults;
+
+        menusContainer.innerHTML = "";
+        for (var i = 0; i < state.menus.length; i += 1) {
+          var menu = state.menus[i];
+          var button = document.createElement("button");
+          button.type = "button";
+          button.className = state.selectedMenuId === menu.id ? "button" : "button secondary";
+          button.style.wordBreak = "break-word";
+          button.textContent = menu.name;
+          button.setAttribute("data-menu-id", menu.id);
+          menusContainer.appendChild(button);
+        }
       }
 
       function renderSessionResultList() {
@@ -733,11 +872,17 @@
 
       function render() {
         renderHome();
-        renderSession();
-        renderEditList();
-        renderEditForm();
-        renderResult();
-        renderPreviousResult();
+        if (state.screen !== "menu-setup" && state.screen !== "menu-manager") {
+          renderSession();
+          renderEditList();
+          renderEditForm();
+          renderResult();
+          renderPreviousResult();
+        } else if (state.screen === "menu-setup") {
+          renderMenuSetup();
+        } else if (state.screen === "menu-manager") {
+          renderMenuManager();
+        }
       }
 
       function copyText(text, messageElementId) {
@@ -753,6 +898,110 @@
             target.textContent = "";
           }, 2000);
         });
+      }
+
+      function renderMenuSetup() {
+        document.getElementById("menu-setup-name").value = state.menuSetup.name;
+        var problemsList = document.getElementById("menu-setup-problems");
+        problemsList.innerHTML = "";
+
+        if (state.menuSetup.problems.length === 0) {
+          var empty = document.createElement("div");
+          empty.className = "muted";
+          empty.style.fontSize = "14px";
+          empty.textContent = "課題を追加してください。";
+          problemsList.appendChild(empty);
+          return;
+        }
+
+        for (var i = 0; i < state.menuSetup.problems.length; i += 1) {
+          var problem = state.menuSetup.problems[i];
+          var item = document.createElement("div");
+          item.className = "menu-item";
+          
+          var select = document.createElement("select");
+          select.className = "select";
+          select.style.flex = "1";
+          select.setAttribute("data-problem-index", i);
+          
+          var placeholder = document.createElement("option");
+          placeholder.value = "";
+          placeholder.textContent = "選択してください";
+          select.appendChild(placeholder);
+          
+          for (var j = 0; j < GRADE_OPTIONS.length; j += 1) {
+            var option = document.createElement("option");
+            option.value = GRADE_OPTIONS[j];
+            option.textContent = GRADE_OPTIONS[j];
+            if (GRADE_OPTIONS[j] === problem.grade) {
+              option.selected = true;
+            }
+            select.appendChild(option);
+          }
+          
+          select.addEventListener("change", function (e) {
+            var idx = Number(e.target.getAttribute("data-problem-index"));
+            state.menuSetup.problems[idx].grade = e.target.value;
+          });
+          
+          item.appendChild(select);
+          
+          var numberSpan = document.createElement("span");
+          numberSpan.style.minWidth = "24px";
+          numberSpan.textContent = (i + 1) + ".";
+          
+          var infoDiv = document.createElement("div");
+          infoDiv.className = "menu-item-info";
+          infoDiv.innerHTML = "<div class=\"menu-item-grade\">" + (i + 1) + ". " + escapeHtml(problem.grade || "未選択") + "</div>";
+          
+          var deleteBtn = document.createElement("button");
+          deleteBtn.className = "button ghost small-button";
+          deleteBtn.type = "button";
+          deleteBtn.textContent = "削除";
+          deleteBtn.setAttribute("data-problem-index", i);
+          (function(idx) {
+            deleteBtn.addEventListener("click", function () {
+              state.menuSetup.problems = state.menuSetup.problems.filter(function (_, i) {
+                return i !== idx;
+              });
+              renderMenuSetup();
+            });
+          })(i);
+          
+          item.appendChild(infoDiv);
+          item.appendChild(deleteBtn);
+          problemsList.appendChild(item);
+        }
+      }
+
+      function renderMenuManager() {
+        var list = document.getElementById("menu-manager-list");
+        list.innerHTML = "";
+
+        if (state.menus.length === 0) {
+          var empty = document.createElement("div");
+          empty.className = "muted";
+          empty.style.fontSize = "14px";
+          empty.textContent = "メニューが作成されていません。";
+          list.appendChild(empty);
+          return;
+        }
+
+        for (var i = 0; i < state.menus.length; i += 1) {
+          var menu = state.menus[i];
+          var item = document.createElement("div");
+          item.className = "edit-item";
+          item.innerHTML = '<div class="edit-item-header">' +
+            '<div class="stack-sm" style="gap:4px; font-size:14px;">' +
+              '<div style="font-weight:700;">' + escapeHtml(menu.name) + '</div>' +
+              '<div class="muted">課題数: ' + menu.problems.length + '</div>' +
+            '</div>' +
+            '<div class="icon-buttons">' +
+              '<button class="button ghost icon-button" type="button" data-delete-menu-id="' + escapeHtml(menu.id) + '">削除</button>' +
+            '</div>' +
+          '</div>';
+          list.appendChild(item);
+        }
       }
 
       function recordProblem(status) {
@@ -776,27 +1025,107 @@
           status: status
         });
 
-        state.editor = createInitialEditorState(state.editor.grade);
-        render();
+        var nextProblem = null;
+        if (state.selectedMenuId && state.menuProgress !== null && state.menuProgress.index < state.menuProgress.items.length - 1) {
+          state.menuProgress.index += 1;
+          nextProblem = state.menuProgress.items[state.menuProgress.index];
+          state.editor = {
+            grade: nextProblem.grade,
+            tryCount: 1,
+            wallAngle: "",
+            problemType: "",
+            memo: ""
+          };
+          render();
+        } else if (state.selectedMenuId && state.menuProgress !== null && state.menuProgress.index === state.menuProgress.items.length - 1) {
+          if (window.confirm("メニューが完了しました。Sessionを終了しますか？")) {
+            var result = {
+              sessionType: state.sessionType || "",
+              menuId: state.selectedMenuId || null,
+              endedAt: new Date().toISOString(),
+              problems: state.problems.slice()
+            };
+            saveLastSession(result);
+            state.lastSessionResults = result;
+            state.selectedMenuId = null;
+            state.menuProgress = null;
+            showScreen("result");
+          } else {
+            // メニューを脱出して通常のSessionに戻す
+            state.selectedMenuId = null;
+            state.menuProgress = null;
+            state.editor = createInitialEditorState("");
+            render();
+          }
+        } else {
+          state.editor = createInitialEditorState(state.editor.grade);
+          render();
+        }
       }
 
       function bindEvents() {
         document.getElementById("home-type-volume").addEventListener("click", function () {
           state.sessionType = "volume";
+          state.selectedMenuId = null;
+          state.menuProgress = null;
           renderHome();
         });
 
         document.getElementById("home-type-max").addEventListener("click", function () {
           state.sessionType = "max";
+          state.selectedMenuId = null;
+          state.menuProgress = null;
           renderHome();
         });
 
+        document.getElementById("home-menu-add").addEventListener("click", function () {
+          showScreen("menu-manager");
+        });
+
+        document.getElementById("home-menus").addEventListener("click", function (e) {
+          if (e.target.tagName === "BUTTON" && e.target.hasAttribute("data-menu-id")) {
+            var menuId = e.target.getAttribute("data-menu-id");
+            if (state.selectedMenuId === menuId) {
+              state.selectedMenuId = null;
+              state.menuProgress = null;
+            } else {
+              state.selectedMenuId = menuId;
+              state.sessionType = "";
+            }
+            renderHome();
+          }
+        });
+
         document.getElementById("home-start").addEventListener("click", function () {
-          if (!state.sessionType) return;
+          if (!state.sessionType && !state.selectedMenuId) return;
           state.problems = [];
-          state.editor = createInitialEditorState("");
           state.editingIndex = null;
           state.editState = null;
+
+          if (state.selectedMenuId) {
+            var selectedMenu = null;
+            for (var i = 0; i < state.menus.length; i += 1) {
+              if (state.menus[i].id === state.selectedMenuId) {
+                selectedMenu = state.menus[i];
+                break;
+              }
+            }
+            if (selectedMenu) {
+              state.menuProgress = {
+                index: 0,
+                items: selectedMenu.problems
+              };
+              state.editor = {
+                grade: selectedMenu.problems[0].grade,
+                tryCount: 1,
+                wallAngle: "",
+                problemType: "",
+                memo: ""
+              };
+            }
+          } else {
+            state.editor = createInitialEditorState("");
+          }
           showScreen("session");
         });
 
@@ -839,7 +1168,35 @@
         });
 
         document.getElementById("session-end").addEventListener("click", function () {
-          document.getElementById("end-dialog").classList.add("open");
+          if (state.selectedMenuId && state.menuProgress !== null && state.menuProgress.index < state.menuProgress.items.length) {
+            if (window.confirm("メニューを完了したくありませんか。現在の記録を保存して終了します。")) {
+              var result = {
+                sessionType: state.sessionType || "",
+                menuId: state.selectedMenuId || null,
+                endedAt: new Date().toISOString(),
+                problems: state.problems.slice()
+              };
+              saveLastSession(result);
+              state.lastSessionResults = result;
+              state.selectedMenuId = null;
+              state.menuProgress = null;
+              showScreen("result");
+            }
+          } else {
+            if (window.confirm("記録を保存して終了しますか？")) {
+              var result = {
+                sessionType: state.sessionType || "",
+                menuId: state.selectedMenuId || null,
+                endedAt: new Date().toISOString(),
+                problems: state.problems.slice()
+              };
+              saveLastSession(result);
+              state.lastSessionResults = result;
+              state.selectedMenuId = null;
+              state.menuProgress = null;
+              showScreen("result");
+            }
+          }
         });
 
         document.getElementById("end-dialog-cancel").addEventListener("click", function () {
@@ -847,16 +1204,7 @@
         });
 
         document.getElementById("end-dialog-confirm").addEventListener("click", function () {
-          if (!state.sessionType) return;
-          var result = {
-            sessionType: state.sessionType,
-            endedAt: new Date().toISOString(),
-            problems: state.problems.slice()
-          };
-          saveLastSession(result);
-          state.lastSessionResults = result;
-          document.getElementById("end-dialog").classList.remove("open");
-          showScreen("result");
+          // 不使用（session-endハンドラで直接処理）
         });
 
         document.getElementById("edit-list").addEventListener("click", function (e) {
@@ -997,6 +1345,69 @@
         document.getElementById("end-dialog").addEventListener("click", function (e) {
           if (e.target.id === "end-dialog") {
             document.getElementById("end-dialog").classList.remove("open");
+          }
+        });
+
+        document.getElementById("menu-setup-name").addEventListener("input", function (e) {
+          state.menuSetup.name = e.target.value;
+        });
+
+        document.getElementById("menu-setup-add-problem").addEventListener("click", function () {
+          state.menuSetup.problems.push({
+            grade: ""
+          });
+          renderMenuSetup();
+        });
+
+        document.getElementById("menu-setup-save").addEventListener("click", function () {
+          if (!state.menuSetup.name.trim()) {
+            window.alert("メニュー名を入力してください。");
+            return;
+          }
+          if (state.menuSetup.problems.length === 0) {
+            window.alert("課題を追加してください。");
+            return;
+          }
+          for (var i = 0; i < state.menuSetup.problems.length; i += 1) {
+            if (!state.menuSetup.problems[i].grade) {
+              window.alert((i + 1) + "番目の課題でグレードを選択してください。");
+              return;
+            }
+          }
+          var newMenu = {
+            id: createMenuId(),
+            name: state.menuSetup.name,
+            problems: state.menuSetup.problems.slice()
+          };
+          state.menus.push(newMenu);
+          saveMenus(state.menus);
+          showScreen("menu-manager");
+        });
+
+        document.getElementById("menu-setup-cancel").addEventListener("click", function () {
+          showScreen("menu-manager");
+        });
+
+        document.getElementById("menu-manager-create").addEventListener("click", function () {
+          state.menuSetup.name = "";
+          state.menuSetup.problems = [];
+          showScreen("menu-setup");
+        });
+
+        document.getElementById("menu-manager-close").addEventListener("click", function () {
+          showScreen("home");
+        });
+
+        document.getElementById("menu-manager-list").addEventListener("click", function (e) {
+          var deleteMenuId = e.target.getAttribute("data-delete-menu-id");
+          if (deleteMenuId) {
+            if (window.confirm("このメニューを削除しますか？")) {
+              state.menus = state.menus.filter(function (menu) {
+                return menu.id !== deleteMenuId;
+              });
+              saveMenus(state.menus);
+              renderMenuManager();
+            }
           }
         });
       }
