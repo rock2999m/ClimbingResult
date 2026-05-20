@@ -439,9 +439,9 @@
             </div>
 
             <label class="field">
-              <span class="label">メモ（20文字以内）</span>
-              <input id="session-memo" class="input" type="text" maxlength="20" placeholder="任意入力" />
-              <div id="session-memo-count" class="small muted" style="text-align: right;">0/20</div>
+              <span class="label">メモ（100文字以内）</span>
+              <input id="session-memo" class="input" type="text" maxlength="100" placeholder="任意入力" />
+              <div id="session-memo-count" class="small muted" style="text-align: right;">0/100</div>
             </label>
 
             <div class="grid-2">
@@ -509,9 +509,9 @@
                 </div>
 
                 <label class="field">
-                  <span class="label">メモ（20文字以内）</span>
-                  <input id="edit-memo" class="input" type="text" maxlength="20" placeholder="任意入力" />
-                  <div id="edit-memo-count" class="small muted" style="text-align: right;">0/20</div>
+                  <span class="label">メモ（100文字以内）</span>
+                  <input id="edit-memo" class="input" type="text" maxlength="100" placeholder="任意入力" />
+                  <div id="edit-memo-count" class="small muted" style="text-align: right;">0/100</div>
                 </label>
 
                 <div class="grid-2">
@@ -634,7 +634,7 @@
         if (!params.grade) return "グレードを選択してください。";
         if (!params.wallAngle) return "壁の傾斜を選択してください。";
         if (!params.problemType) return "課題タイプを選択してください。";
-        if ((params.memo || "").length > 20) return "メモは20文字以内で入力してください。";
+        if ((params.memo || "").length > 100) return "メモは100文字以内で入力してください。";
         if (params.requireStatus && !params.status) return "完登 / 未登を選択してください。";
         return null;
       }
@@ -777,7 +777,7 @@
         renderSelect(document.getElementById("session-problem-type"), PROBLEM_TYPE_OPTIONS, state.editor.problemType);
         document.getElementById("session-try-count").textContent = String(state.editor.tryCount);
         document.getElementById("session-memo").value = state.editor.memo;
-        document.getElementById("session-memo-count").textContent = state.editor.memo.length + "/20";
+        document.getElementById("session-memo-count").textContent = state.editor.memo.length + "/100";
         renderSessionResultList();
       }
 
@@ -835,7 +835,7 @@
         renderSelect(type, PROBLEM_TYPE_OPTIONS, state.editState.problemType);
         tryCount.textContent = String(state.editState.tryCount);
         memo.value = state.editState.memo;
-        memoCount.textContent = state.editState.memo.length + "/20";
+        memoCount.textContent = state.editState.memo.length + "/100";
         sentBtn.className = state.editState.status === "sent" ? "button" : "button secondary";
         unsentBtn.className = state.editState.status === "unsent" ? "button" : "button secondary";
       }
@@ -1151,7 +1151,7 @@
 
         document.getElementById("session-memo").addEventListener("input", function (e) {
           state.editor.memo = e.target.value;
-          document.getElementById("session-memo-count").textContent = state.editor.memo.length + "/20";
+          document.getElementById("session-memo-count").textContent = state.editor.memo.length + "/100";
         });
 
         document.getElementById("session-try-plus").addEventListener("click", function () {
