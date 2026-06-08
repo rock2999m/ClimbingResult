@@ -1,4 +1,4 @@
-var CACHE_NAME = "climbing-session-recorder-v1";
+var CACHE_NAME = "climbing-session-recorder-v2";
 var APP_SHELL = [
   "./",
   "./index.html",
