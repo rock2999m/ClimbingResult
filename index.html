@@ -362,7 +362,7 @@
               <button id="home-start" class="button" type="button" disabled>Session開始</button>
               <button id="home-previous" class="button secondary" type="button">前回のResultを表示</button>
             </div>
-            <div class="small muted" style="text-align: center; margin-top: 8px;">v1.3.1</div>
+            <div class="small muted" style="text-align: center; margin-top: 8px;">v1.4.1</div>
           </div>
         </div>
       </section>
@@ -440,15 +440,21 @@
               <button id="session-try-plus" class="button try-button" type="button">トライ +1</button>
             </div>
 
+            <div class="field">
+              <div class="label">バラしトライ数</div>
+              <div id="session-partial-try-count" class="count-box">0</div>
+              <button id="session-partial-try-plus" class="button secondary" type="button">バラしトライ +1</button>
+            </div>
+
             <label class="field">
               <span class="label">REP</span>
               <select id="session-rep" class="select"></select>
             </label>
 
             <label class="field">
-              <span class="label">メモ（100文字以内）</span>
-              <input id="session-memo" class="input" type="text" maxlength="100" placeholder="任意入力" />
-              <div id="session-memo-count" class="small muted" style="text-align: right;">0/100</div>
+              <span class="label">メモ（200文字以内）</span>
+              <input id="session-memo" class="input" type="text" maxlength="200" placeholder="任意入力" />
+              <div id="session-memo-count" class="small muted" style="text-align: right;">0/200</div>
             </label>
 
             <div class="grid-2">
@@ -461,6 +467,7 @@
                 <div class="label">現在のResult</div>
                 <div class="small muted">直近の記録を表示</div>
               </div>
+              <div id="session-summary" class="text-block"></div>
               <div id="session-result-list" class="result-list"></div>
               <button id="session-end" class="button danger" type="button">Session終了</button>
             </div>
@@ -507,6 +514,15 @@
                   </div>
                 </div>
 
+                <div class="field">
+                  <div class="label">バラしトライ数</div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <button id="edit-partial-try-minus" class="button ghost icon-button" type="button">-</button>
+                    <div id="edit-partial-try-count" class="count-box" style="min-width: 80px; min-height: 48px; font-size: 20px;">0</div>
+                    <button id="edit-partial-try-plus" class="button ghost icon-button" type="button">+</button>
+                  </div>
+                </div>
+
                 <label class="field">
                   <span class="label">REP</span>
                   <select id="edit-rep" class="select"></select>
@@ -521,9 +537,9 @@
                 </div>
 
                 <label class="field">
-                  <span class="label">メモ（100文字以内）</span>
-                  <input id="edit-memo" class="input" type="text" maxlength="100" placeholder="任意入力" />
-                  <div id="edit-memo-count" class="small muted" style="text-align: right;">0/100</div>
+                  <span class="label">メモ（200文字以内）</span>
+                  <input id="edit-memo" class="input" type="text" maxlength="200" placeholder="任意入力" />
+                  <div id="edit-memo-count" class="small muted" style="text-align: right;">0/200</div>
                 </label>
 
                 <div class="grid-2">
@@ -544,6 +560,7 @@
             <h2 class="card-title">Result</h2>
           </div>
           <div class="stack">
+            <div id="result-summary" class="text-block"></div>
             <div id="result-list" class="edit-list"></div>
             <div id="result-text" class="text-block"></div>
             <div style="display: flex; flex-wrap: wrap; gap: 12px;">
@@ -630,6 +647,7 @@
         return {
           grade: previousGrade || "5級",
           tryCount: 1,
+          partialTryCount: 0,
           rep: DEFAULT_REP,
           wallAngle: "",
           problemType: "",
@@ -645,12 +663,40 @@
         return sessionType === "volume" ? "容量" : "最大";
       }
 
+      function getRepNumber(repText) {
+        var match = String(repText || "").match(/REP(\d+)/);
+        return match ? Number(match[1]) : 0;
+      }
+
+      function calculateTotalRep(problems) {
+        var total = 0;
+        for (var i = 0; i < problems.length; i += 1) {
+          total += getRepNumber(problems[i].rep) * (problems[i].tryCount || 0);
+        }
+        return total;
+      }
+
+      function calculateHighIntensityRep(problems) {
+        var total = 0;
+        for (var i = 0; i < problems.length; i += 1) {
+          var repNumber = getRepNumber(problems[i].rep);
+          if (repNumber >= 8) {
+            total += repNumber * (problems[i].tryCount || 0);
+          }
+        }
+        return total;
+      }
+
+      function formatRepSummary(problems) {
+        return "総REP: " + calculateTotalRep(problems) + " / 高強度REP: " + calculateHighIntensityRep(problems);
+      }
+
       function formatResultText(sessionType, problems) {
-        var lines = ["Session: " + getSessionLabel(sessionType), ""];
+        var lines = ["Session: " + getSessionLabel(sessionType), formatRepSummary(problems), ""];
         for (var i = 0; i < problems.length; i += 1) {
           var problem = problems[i];
           var memoText = problem.memo && problem.memo.trim() ? problem.memo.trim() : "メモなし";
-          lines.push((i + 1) + ". " + problem.grade + " / " + problem.wallAngle + " / " + problem.problemType + " / " + problem.tryCount + "トライ / " + problem.rep + " / " + getStatusLabel(problem.status) + " / " + memoText);
+          lines.push((i + 1) + ". " + problem.grade + " / " + problem.wallAngle + " / " + problem.problemType + " / " + problem.tryCount + "トライ / バラし" + (problem.partialTryCount || 0) + "トライ / " + problem.rep + " / " + getStatusLabel(problem.status) + " / " + memoText);
         }
         return lines.join("\n");
       }
@@ -660,7 +706,7 @@
         if (!params.wallAngle) return "壁の傾斜を選択してください。";
         if (!params.problemType) return "課題タイプを選択してください。";
         if (!params.rep) return "REPを選択してください。";
-        if ((params.memo || "").length > 100) return "メモは100文字以内で入力してください。";
+        if ((params.memo || "").length > 200) return "メモは200文字以内で入力してください。";
         if (params.requireStatus && !params.status) return "完登 / 未登を選択してください。";
         return null;
       }
@@ -704,6 +750,7 @@
           editor: {
             grade: state.editor.grade,
             tryCount: state.editor.tryCount,
+            partialTryCount: state.editor.partialTryCount,
             rep: state.editor.rep,
             wallAngle: state.editor.wallAngle,
             problemType: state.editor.problemType,
@@ -714,6 +761,7 @@
             grade: state.editState.grade,
             wallAngle: state.editState.wallAngle,
             tryCount: state.editState.tryCount,
+            partialTryCount: state.editState.partialTryCount,
             rep: state.editState.rep,
             problemType: state.editState.problemType,
             memo: state.editState.memo,
@@ -750,6 +798,7 @@
         state.editor = draft.editor ? {
           grade: draft.editor.grade || "5級",
           tryCount: typeof draft.editor.tryCount === "number" ? draft.editor.tryCount : 1,
+          partialTryCount: typeof draft.editor.partialTryCount === "number" ? draft.editor.partialTryCount : 0,
           rep: draft.editor.rep || DEFAULT_REP,
           wallAngle: draft.editor.wallAngle || "",
           problemType: draft.editor.problemType || "",
@@ -760,6 +809,7 @@
           grade: draft.editState.grade || "5級",
           wallAngle: draft.editState.wallAngle || "",
           tryCount: typeof draft.editState.tryCount === "number" ? draft.editState.tryCount : 1,
+          partialTryCount: typeof draft.editState.partialTryCount === "number" ? draft.editState.partialTryCount : 0,
           rep: draft.editState.rep || DEFAULT_REP,
           problemType: draft.editState.problemType || "",
           memo: draft.editState.memo || "",
@@ -869,7 +919,7 @@
           item.innerHTML = '<div class="result-row">' +
             '<span class="result-no">' + index + '.</span>' +
             '<span class="result-main">' + escapeHtml(problem.grade) + ' / ' + escapeHtml(problem.wallAngle) + ' / ' + escapeHtml(problem.problemType) + '</span>' +
-            '<span>' + problem.tryCount + 'トライ / ' + escapeHtml(problem.rep || DEFAULT_REP) + ' / ' + getStatusLabel(problem.status) + '</span>' +
+            '<span>' + problem.tryCount + 'トライ / バラし' + (problem.partialTryCount || 0) + 'トライ / ' + escapeHtml(problem.rep || DEFAULT_REP) + ' / ' + getStatusLabel(problem.status) + '</span>' +
             '<span class="muted">' + escapeHtml(problem.memo && problem.memo.trim() ? problem.memo : "メモなし") + '</span>' +
           '</div>';
           list.appendChild(item);
@@ -883,8 +933,10 @@
         renderSelect(document.getElementById("session-problem-type"), PROBLEM_TYPE_OPTIONS, state.editor.problemType);
         renderSelect(document.getElementById("session-rep"), REP_OPTIONS, state.editor.rep);
         document.getElementById("session-try-count").textContent = String(state.editor.tryCount);
+        document.getElementById("session-partial-try-count").textContent = String(state.editor.partialTryCount || 0);
+        document.getElementById("session-summary").textContent = formatRepSummary(state.problems);
         document.getElementById("session-memo").value = state.editor.memo;
-        document.getElementById("session-memo-count").textContent = state.editor.memo.length + "/100";
+        document.getElementById("session-memo-count").textContent = state.editor.memo.length + "/200";
         renderSessionResultList();
       }
 
@@ -908,7 +960,7 @@
           item.innerHTML = '<div class="edit-item-header">' +
             '<div class="stack-sm" style="gap:4px; font-size:14px;">' +
               '<div style="font-weight:700;">' + (i + 1) + '. ' + escapeHtml(problem.grade) + ' / ' + escapeHtml(problem.wallAngle) + ' / ' + escapeHtml(problem.problemType) + '</div>' +
-              '<div>' + problem.tryCount + 'トライ / ' + escapeHtml(problem.rep || DEFAULT_REP) + ' / ' + getStatusLabel(problem.status) + '</div>' +
+              '<div>' + problem.tryCount + 'トライ / バラし' + (problem.partialTryCount || 0) + 'トライ / ' + escapeHtml(problem.rep || DEFAULT_REP) + ' / ' + getStatusLabel(problem.status) + '</div>' +
               '<div class="muted">' + escapeHtml(problem.memo && problem.memo.trim() ? problem.memo : "メモなし") + '</div>' +
             '</div>' +
             '<div class="icon-buttons">' +
@@ -927,6 +979,7 @@
         var type = document.getElementById("edit-problem-type");
         var rep = document.getElementById("edit-rep");
         var tryCount = document.getElementById("edit-try-count");
+        var partialTryCount = document.getElementById("edit-partial-try-count");
         var memo = document.getElementById("edit-memo");
         var memoCount = document.getElementById("edit-memo-count");
         var sentBtn = document.getElementById("edit-status-sent");
@@ -943,8 +996,9 @@
         renderSelect(type, PROBLEM_TYPE_OPTIONS, state.editState.problemType);
         renderSelect(rep, REP_OPTIONS, state.editState.rep);
         tryCount.textContent = String(state.editState.tryCount);
+        partialTryCount.textContent = String(state.editState.partialTryCount || 0);
         memo.value = state.editState.memo;
-        memoCount.textContent = state.editState.memo.length + "/100";
+        memoCount.textContent = state.editState.memo.length + "/200";
         sentBtn.className = state.editState.status === "sent" ? "button" : "button secondary";
         unsentBtn.className = state.editState.status === "unsent" ? "button" : "button secondary";
       }
@@ -958,7 +1012,7 @@
           item.className = "edit-item";
           item.innerHTML = '<div class="stack-sm" style="gap:4px; font-size:14px;">' +
             '<div style="font-weight:700;">' + (i + 1) + '. ' + escapeHtml(problem.grade) + ' / ' + escapeHtml(problem.wallAngle) + ' / ' + escapeHtml(problem.problemType) + '</div>' +
-            '<div>' + problem.tryCount + 'トライ / ' + escapeHtml(problem.rep || DEFAULT_REP) + ' / ' + getStatusLabel(problem.status) + '</div>' +
+            '<div>' + problem.tryCount + 'トライ / バラし' + (problem.partialTryCount || 0) + 'トライ / ' + escapeHtml(problem.rep || DEFAULT_REP) + ' / ' + getStatusLabel(problem.status) + '</div>' +
             '<div class="muted">' + escapeHtml(problem.memo && problem.memo.trim() ? problem.memo : "メモなし") + '</div>' +
           '</div>';
           list.appendChild(item);
@@ -966,6 +1020,7 @@
       }
 
       function renderResult() {
+        document.getElementById("result-summary").textContent = formatRepSummary(state.problems);
         renderResultList("result-list", state.problems);
         document.getElementById("result-text").textContent = state.sessionType ? formatResultText(state.sessionType, state.problems) : "";
       }
@@ -1141,6 +1196,7 @@
           grade: state.editor.grade,
           wallAngle: state.editor.wallAngle,
           tryCount: state.editor.tryCount,
+          partialTryCount: state.editor.partialTryCount,
           rep: state.editor.rep,
           problemType: state.editor.problemType,
           memo: state.editor.memo,
@@ -1154,6 +1210,7 @@
           state.editor = {
             grade: nextProblem.grade,
             tryCount: 1,
+            partialTryCount: 0,
             rep: DEFAULT_REP,
             wallAngle: "",
             problemType: "",
@@ -1237,6 +1294,7 @@
               state.editor = {
                 grade: selectedMenu.problems[0].grade,
                 tryCount: 1,
+                partialTryCount: 0,
                 rep: DEFAULT_REP,
                 wallAngle: "",
                 problemType: "",
@@ -1281,7 +1339,7 @@
 
         document.getElementById("session-memo").addEventListener("input", function (e) {
           state.editor.memo = e.target.value;
-          document.getElementById("session-memo-count").textContent = state.editor.memo.length + "/100";
+          document.getElementById("session-memo-count").textContent = state.editor.memo.length + "/200";
         });
 
         document.getElementById("session-memo").addEventListener("blur", function () {
@@ -1290,6 +1348,12 @@
 
         document.getElementById("session-try-plus").addEventListener("click", function () {
           state.editor.tryCount += 1;
+          saveDraft();
+          renderSession();
+        });
+
+        document.getElementById("session-partial-try-plus").addEventListener("click", function () {
+          state.editor.partialTryCount += 1;
           saveDraft();
           renderSession();
         });
@@ -1334,6 +1398,7 @@
               grade: state.problems[editNumber].grade,
               wallAngle: state.problems[editNumber].wallAngle,
               tryCount: state.problems[editNumber].tryCount,
+              partialTryCount: state.problems[editNumber].partialTryCount || 0,
               rep: state.problems[editNumber].rep || DEFAULT_REP,
               problemType: state.problems[editNumber].problemType,
               memo: state.problems[editNumber].memo,
@@ -1387,7 +1452,7 @@
         document.getElementById("edit-memo").addEventListener("input", function (e) {
           if (!state.editState) return;
           state.editState.memo = e.target.value;
-          document.getElementById("edit-memo-count").textContent = state.editState.memo.length + "/100";
+          document.getElementById("edit-memo-count").textContent = state.editState.memo.length + "/200";
         });
 
         document.getElementById("edit-memo").addEventListener("blur", function () {
@@ -1405,6 +1470,20 @@
         document.getElementById("edit-try-plus").addEventListener("click", function () {
           if (!state.editState) return;
           state.editState.tryCount += 1;
+          saveDraft();
+          renderEditForm();
+        });
+
+        document.getElementById("edit-partial-try-minus").addEventListener("click", function () {
+          if (!state.editState) return;
+          state.editState.partialTryCount = Math.max(0, (state.editState.partialTryCount || 0) - 1);
+          saveDraft();
+          renderEditForm();
+        });
+
+        document.getElementById("edit-partial-try-plus").addEventListener("click", function () {
+          if (!state.editState) return;
+          state.editState.partialTryCount = (state.editState.partialTryCount || 0) + 1;
           saveDraft();
           renderEditForm();
         });
@@ -1442,6 +1521,7 @@
             grade: state.editState.grade,
             wallAngle: state.editState.wallAngle,
             tryCount: state.editState.tryCount,
+            partialTryCount: state.editState.partialTryCount,
             rep: state.editState.rep,
             problemType: state.editState.problemType,
             memo: state.editState.memo,
